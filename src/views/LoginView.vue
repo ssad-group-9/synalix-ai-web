@@ -9,8 +9,7 @@
                             <!-- 头部 -->
                             <v-card-title class="text-center py-6">
                                 <div class="login-header">
-                                    <v-icon icon="mdi-brain" size="48" color="primary" class="mb-3" />
-                                    <h2 class="text-h4 font-weight-bold text-primary">Synalix AI</h2>
+                                    <img src="/title.svg" alt="Synalix AI" class="title-logo mb-3" />
                                     <p class="text-subtitle-1 text-grey-600 mt-2">大模型训练管理平台</p>
                                 </div>
                             </v-card-title>
@@ -180,6 +179,12 @@ onMounted(() => {
 
 .login-header {
     text-align: center;
+}
+
+.title-logo {
+    height: 60px;
+    max-width: 240px;
+    object-fit: contain;
 }
 
 .fill-height {

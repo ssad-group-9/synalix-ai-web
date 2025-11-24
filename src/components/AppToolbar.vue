@@ -1,14 +1,9 @@
 <template>
     <v-app-bar app elevation="1" color="white" height="64">
-        <!-- 左侧：APP图标 -->
-        <v-btn icon @click="goToOverview" class="mr-4">
-            <v-icon icon="mdi-brain" size="32" color="primary" />
-        </v-btn>
-
-        <!-- APP名称 -->
-        <v-toolbar-title class="text-h6 font-weight-bold mr-6" @click="goToOverview" style="cursor: pointer;">
-            Synalix AI
-        </v-toolbar-title>
+        <!-- 左侧：APP标题图片 -->
+        <div @click="goToOverview" class="title-container mx-6" style="cursor: pointer;">
+            <img src="/title.svg" alt="Synalix AI" class="toolbar-title-logo" />
+        </div>
 
         <!-- 中间：导航按钮 -->
         <div class="navigation-buttons">
@@ -61,7 +56,10 @@ const authStore = useAuthStore()
 
 // 导航项目
 const navigationItems = [
-    { name: 'overview', title: '概览', to: '/overview' }
+    { name: 'overview', title: '概览', to: '/overview' },
+    { name: 'model-center', title: '模型中心', to: '/model-center' },
+    { name: 'task-management', title: '任务管理', to: '/task-management' },
+    { name: 'dataset-management', title: '数据集管理', to: '/dataset-management' }
     // 可以在这里扩展更多导航项目
 ]
 
@@ -115,5 +113,17 @@ const goToLogin = () => {
 
 .v-toolbar-title {
     color: #1976d2;
+}
+
+.title-container {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.toolbar-title-logo {
+    height: 40px;
+    max-width: 160px;
+    object-fit: contain;
 }
 </style>

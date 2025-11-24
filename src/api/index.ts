@@ -7,6 +7,8 @@ import type {
   LogoutRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
+  CreateUserRequest,
+  CreateUserResponse,
   User,
 } from './types'
 
@@ -32,4 +34,22 @@ export const userApi = {
   // 修改当前用户密码
   changePassword: (data: ChangePasswordRequest) =>
     apiClient.post<void>('/api/users/me/password', data),
+
+  // 创建用户（管理员）
+  createUser: (data: CreateUserRequest) => apiClient.post<CreateUserResponse>('/api/users', data),
+
+  // 获取全部用户（管理员）
+  getAllUsers: () => apiClient.get<User[]>('/api/users'),
+
+  // 获取用户信息（管理员）
+  getUser: (userId: string) => apiClient.get<User>(`/api/users/${userId}`),
+
+  // 更新用户信息（管理员）
+  updateUser: (userId: string, data: UpdateUserRequest) => apiClient.patch<User>(`/api/users/${userId}`, data),
+
+  // 删除用户（管理员）
+  deleteUser: (userId: string) => apiClient.delete<void>(`/api/users/${userId}`),
+
+  // 重置用户密码（管理员）
+  resetUserPassword: (userId: string) => apiClient.post<string>(`/api/users/${userId}/password`),
 }

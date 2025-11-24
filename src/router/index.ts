@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useLoadingStore } from '@/stores/loading'
 import OverviewView from '../views/OverviewView.vue'
+
+// 应用程序名称
+const APP_NAME = 'Synalix AI'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,15 +33,59 @@ const router = createRouter({
       },
     },
     {
+      path: '/model-center',
+      name: 'model-center',
+      component: () => import('../views/model-center/ModelCenterView.vue'),
+      meta: {
+        title: '模型中心',
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/task-management',
+      name: 'task-management',
+      component: () => import('../views/task-management/TaskManagementView.vue'),
+      meta: {
+        title: '任务管理',
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/dataset-management',
+      name: 'dataset-management',
+      component: () => import('../views/dataset-management/DatasetManagementView.vue'),
+      meta: {
+        title: '数据集管理',
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/admin',
       name: 'admin',
-      component: () => import('../views/AdminConsoleView.vue'),
+      component: () => import('../views/admin/AdminConsoleView.vue'),
       meta: {
         title: '管理控制台',
         requiresAuth: true,
         requiresAdmin: true,
         hideToolbar: true,
       },
+      children: [
+        {
+          path: '',
+          redirect: '/admin/users',
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('../views/admin/UserManagementView.vue'),
+          meta: {
+            title: '用户管理',
+            requiresAuth: true,
+            requiresAdmin: true,
+            hideToolbar: true,
+          },
+        },
+      ],
     },
     {
       path: '/profile',
@@ -54,7 +102,11 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
+  const loadingStore = useLoadingStore()
   const isAuthenticated = authStore.isAuthenticated()
+  
+  // 开始加载
+  loadingStore.startLoading()
 
   // 如果访问需要游客身份的页面（如登录页），但用户已登录
   if (to.meta.requiresGuest && isAuthenticated) {
@@ -80,6 +132,23 @@ router.beforeEach((to, from, next) => {
   }
 
   next()
+})
+
+// 路由完成后停止加载并更新页面标题
+router.afterEach((to) => {
+  const loadingStore = useLoadingStore()
+  // 等待页面内容渲染完成后开始完成动画
+  setTimeout(() => {
+    loadingStore.stopLoading()
+  }, 50) // 短暂延迟确保页面开始渲染
+  
+  // 更新页面标题
+  const pageTitle = to.meta.title as string
+  if (pageTitle) {
+    document.title = `${pageTitle} - ${APP_NAME}`
+  } else {
+    document.title = APP_NAME
+  }
 })
 
 export default router

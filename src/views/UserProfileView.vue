@@ -1,7 +1,7 @@
 <template>
     <v-container class="user-profile-page">
-        <v-row>
-            <v-col cols="12">
+        <v-row justify="center">
+            <v-col cols="12" md="8">
                 <div class="page-header">
                     <v-avatar size="80" class="mr-4">
                         <v-img :src="userAvatarUrl" :alt="user?.nickname || '用户'" />
@@ -15,7 +15,7 @@
         </v-row>
 
         <!-- 个人信息卡片 -->
-        <v-row>
+        <v-row justify="center">
             <v-col cols="12" md="8">
                 <v-card class="mb-6">
                     <v-card-title class="d-flex justify-space-between align-center">
@@ -66,21 +66,37 @@
                 <v-card class="mb-6">
                     <v-card-title>修改密码</v-card-title>
                     <v-card-text>
-                        <v-form ref="passwordForm" @submit.prevent="changePassword">
+                        <v-form ref="passwordFormRef" @submit.prevent="changePassword">
                             <v-row>
                                 <v-col cols="12">
-                                    <v-text-field v-model="passwordForm.oldPassword" label="当前密码" type="password"
-                                        variant="outlined" :rules="[requiredRule]" autocomplete="current-password" />
+                                    <v-text-field 
+                                        v-model="passwordForm.oldPassword" 
+                                        label="当前密码" 
+                                        type="password"
+                                        variant="outlined" 
+                                        :rules="[requiredRule]" 
+                                        autocomplete="current-password"
+                                        clearable />
                                 </v-col>
                                 <v-col cols="12">
-                                    <v-text-field v-model="passwordForm.newPassword" label="新密码" type="password"
-                                        variant="outlined" :rules="[requiredRule, passwordLengthRule]"
-                                        autocomplete="new-password" />
+                                    <v-text-field 
+                                        v-model="passwordForm.newPassword" 
+                                        label="新密码" 
+                                        type="password"
+                                        variant="outlined" 
+                                        :rules="[requiredRule, passwordLengthRule]"
+                                        autocomplete="new-password"
+                                        clearable />
                                 </v-col>
                                 <v-col cols="12">
-                                    <v-text-field v-model="passwordForm.confirmPassword" label="确认新密码" type="password"
-                                        variant="outlined" :rules="[requiredRule, passwordMatchRule]"
-                                        autocomplete="new-password" />
+                                    <v-text-field 
+                                        v-model="passwordForm.confirmPassword" 
+                                        label="确认新密码" 
+                                        type="password"
+                                        variant="outlined" 
+                                        :rules="[requiredRule, passwordMatchRule]"
+                                        autocomplete="new-password"
+                                        clearable />
                                 </v-col>
                                 <v-col cols="12">
                                     <v-btn type="submit" color="primary" :loading="passwordLoading"
@@ -93,15 +109,9 @@
                     </v-card-text>
                 </v-card>
 
-                <!-- 危险操作 -->
-                <v-card color="error" variant="outlined">
-                    <v-card-title class="text-error">危险操作</v-card-title>
-                    <v-card-text>
-                        <v-btn color="error" variant="outlined" @click="showLogoutDialog = true">
-                            退出登录
-                        </v-btn>
-                    </v-card-text>
-                </v-card>
+                <v-btn class="w-100" color="error" variant="outlined" @click="showLogoutDialog = true">
+                    退出登录
+                </v-btn>
             </v-col>
         </v-row>
 
@@ -143,6 +153,7 @@ const authStore = useAuthStore()
 
 // 响应式数据
 const user = ref<User | null>(null)
+const passwordFormRef = ref()
 const passwordForm = ref({
     oldPassword: '',
     newPassword: '',
@@ -179,7 +190,11 @@ const emailRule = (v: string) => {
     return pattern.test(v) || '请输入有效的邮箱地址'
 }
 const passwordLengthRule = (v: string) => (v && v.length >= 6) || '密码长度至少6个字符'
-const passwordMatchRule = (v: string) => v === passwordForm.value.newPassword || '两次密码输入不一致'
+const passwordMatchRule = (v: string) => {
+    if (!v) return '此字段为必填项'
+    const newPassword = passwordForm.value?.newPassword || ''
+    return v === newPassword || '两次密码输入不一致'
+}
 
 // 格式化日期
 const formatDate = (dateString: string | undefined): string => {
@@ -192,6 +207,16 @@ const showMessage = (text: string, color: 'success' | 'error' | 'info' = 'succes
     snackbar.value.text = text
     snackbar.value.color = color
     snackbar.value.show = true
+}
+
+// 重置密码表单
+const resetPasswordForm = () => {
+    passwordForm.value.oldPassword = ''
+    passwordForm.value.newPassword = ''
+    passwordForm.value.confirmPassword = ''
+    if (passwordFormRef.value) {
+        passwordFormRef.value.resetValidation()
+    }
 }
 
 // 获取用户信息
@@ -222,6 +247,12 @@ const updateUserField = async (field: keyof UpdateUserRequest, value: string | n
 
 // 修改密码
 const changePassword = async () => {
+    // 先验证表单
+    if (passwordFormRef.value) {
+        const { valid } = await passwordFormRef.value.validate()
+        if (!valid) return
+    }
+
     if (!isPasswordFormValid.value) return
 
     passwordLoading.value = true
@@ -232,10 +263,13 @@ const changePassword = async () => {
         })
 
         // 清空表单
-        passwordForm.value = {
-            oldPassword: '',
-            newPassword: '',
-            confirmPassword: ''
+        passwordForm.value.oldPassword = ''
+        passwordForm.value.newPassword = ''
+        passwordForm.value.confirmPassword = ''
+
+        // 重置表单验证状态
+        if (passwordFormRef.value) {
+            passwordFormRef.value.reset()
         }
 
         showMessage('密码修改成功')

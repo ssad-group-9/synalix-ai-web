@@ -33,13 +33,29 @@ export interface LogoutRequest {
 
 export interface UpdateUserRequest {
   nickname?: string
-  email?: string
+  email?: string | null
   enabled?: boolean
   role?: 'USER' | 'ADMIN'
 }
 
 export interface ChangePasswordRequest {
   oldPassword: string
+  newPassword: string
+}
+
+export interface CreateUserRequest {
+  username: string
+  nickname: string
+  email?: string | null
+  role: 'USER' | 'ADMIN'
+}
+
+export interface CreateUserResponse {
+  user: User
+  generatedPassword: string
+}
+
+export interface ResetPasswordResponse {
   newPassword: string
 }
 
