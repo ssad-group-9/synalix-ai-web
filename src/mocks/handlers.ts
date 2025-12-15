@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 // 获取基础URL，用于生成完整的API路由
 const getBaseUrl = () => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 }
 
 // 模拟用户数据
