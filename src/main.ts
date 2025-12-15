@@ -12,8 +12,10 @@ import '@mdi/font/css/materialdesignicons.css'
 import App from './App.vue'
 import router from './router'
 
-// 初始化 MSW (仅在开发环境)
-if (import.meta.env.DEV) {
+// 初始化 MSW（受 VITE_USE_MOCK 控制）
+// 默认在开发环境启用。要禁用，请在对应的 .env 文件中设置 VITE_USE_MOCK=false
+const shouldUseMock = import.meta.env.DEV && (import.meta.env.VITE_USE_MOCK !== 'false')
+if (shouldUseMock) {
   const { worker } = await import('./mocks/worker')
   await worker.start({
     onUnhandledRequest: 'bypass',

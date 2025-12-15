@@ -204,47 +204,29 @@ export const handlers = [
     const user = mockUsers[0] // 模拟登录为管理员
 
     return HttpResponse.json({
-      data: {
-        accessToken: 'mock-access-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now(),
-        user: {
-          id: user.id,
-          username: user.username,
-          nickname: user.nickname,
-          email: user.email,
-          role: user.role,
-          enabled: user.enabled,
-        },
-      },
+      accessToken: 'mock-access-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now(),
     })
   }),
 
   http.post(`${getBaseUrl()}/auth/refresh`, async ({ request }) => {
     return HttpResponse.json({
-      data: {
-        accessToken: 'mock-access-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now(),
-      },
+      accessToken: 'mock-access-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now(),
     })
   }),
 
   http.post(`${getBaseUrl()}/auth/logout`, () => {
-    return HttpResponse.json({
-      data: null,
-    })
+    return HttpResponse.json({ message: '退出登录成功' })
   }),
 
   // ==================== 用户相关 ====================
-  http.get(`${getBaseUrl()}/users/current`, () => {
-    return HttpResponse.json({
-      data: mockUsers[0],
-    })
+  http.get(`${getBaseUrl()}/users/me`, () => {
+    return HttpResponse.json(mockUsers[0])
   }),
 
   http.get(`${getBaseUrl()}/users`, () => {
-    return HttpResponse.json({
-      data: mockUsers,
-    })
+    return HttpResponse.json(mockUsers)
   }),
 
   http.post(`${getBaseUrl()}/users`, async ({ request }) => {
@@ -255,7 +237,7 @@ export const handlers = [
       createdAt: new Date().toISOString(),
     }
     mockUsers.push(user)
-    return HttpResponse.json({ data: user }, { status: 201 })
+    return HttpResponse.json(user, { status: 201 })
   }),
 
   http.get(`${getBaseUrl()}/users/:id`, ({ params }) => {
@@ -266,7 +248,7 @@ export const handlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json({ data: user })
+    return HttpResponse.json(user)
   }),
 
   http.patch(`${getBaseUrl()}/users/:id`, async ({ params, request }) => {
@@ -279,7 +261,7 @@ export const handlers = [
     }
     const updateData = (await request.json()) as any
     mockUsers[userIndex] = { ...mockUsers[userIndex], ...updateData }
-    return HttpResponse.json({ data: mockUsers[userIndex] })
+    return HttpResponse.json(mockUsers[userIndex])
   }),
 
   http.delete(`${getBaseUrl()}/users/:id`, ({ params }) => {
@@ -291,7 +273,7 @@ export const handlers = [
       )
     }
     const deletedUser = mockUsers.splice(userIndex, 1)[0]
-    return HttpResponse.json({ data: deletedUser })
+    return HttpResponse.json(deletedUser)
   }),
 
   http.post(`${getBaseUrl()}/users/:id/change-password`, async ({ params, request }) => {
@@ -302,7 +284,7 @@ export const handlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json({ data: { message: '密码修改成功' } })
+    return HttpResponse.json({ message: '密码修改成功' })
   }),
 
   http.post(`${getBaseUrl()}/users/:id/reset-password`, async ({ params }) => {
@@ -314,7 +296,7 @@ export const handlers = [
       )
     }
     const newPassword = 'TempPass' + Math.random().toString(36).substring(2, 10)
-    return HttpResponse.json({ data: { newPassword } })
+    return HttpResponse.json({ newPassword })
   }),
 
   // ==================== 模型相关 ====================
