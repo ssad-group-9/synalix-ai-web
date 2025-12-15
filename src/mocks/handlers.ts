@@ -199,37 +199,56 @@ const mockResources = {
 
 export const handlers = [
   // ==================== 认证相关 ====================
-  http.post(`${getBaseUrl()}/auth/login`, async ({ request }) => {
+  http.post(`${getBaseUrl()}/api/auth/login`, async ({ request }) => {
     const body = (await request.json()) as { username: string; password: string }
     const user = mockUsers[0] // 模拟登录为管理员
+    if (!user) {
+      return HttpResponse.json(
+        { error: { code: 404, message: '用户不存在' } },
+        { status: 404 }
+      ) // 如果用户不存在，返回错误
+    }
+    return HttpResponse.json({
+      accessToken: 'mock-access-token-' + Date.now(),
+      refreshToken: 'mock-refresh-token-' + Date.now(),
+      user: {
+        id: user.id,
+        username: user.username,
+        nickname: user.nickname,
+        email: user.email,
+        role: user.role,
+        enabled: user.enabled,
+      },
+    })
+  }),
 
+  http.post(`${getBaseUrl()}/api/auth/refresh`, async ({ request }) => {
     return HttpResponse.json({
       accessToken: 'mock-access-token-' + Date.now(),
       refreshToken: 'mock-refresh-token-' + Date.now(),
     })
   }),
 
-  http.post(`${getBaseUrl()}/auth/refresh`, async ({ request }) => {
-    return HttpResponse.json({
-      accessToken: 'mock-access-token-' + Date.now(),
-      refreshToken: 'mock-refresh-token-' + Date.now(),
-    })
-  }),
-
-  http.post(`${getBaseUrl()}/auth/logout`, () => {
-    return HttpResponse.json({ message: '退出登录成功' })
+  http.post(`${getBaseUrl()}/api/auth/logout`, () => {
+    return HttpResponse.json(
+      null,
+    )
   }),
 
   // ==================== 用户相关 ====================
-  http.get(`${getBaseUrl()}/users/me`, () => {
-    return HttpResponse.json(mockUsers[0])
+  http.get(`${getBaseUrl()}/api/users/current`, () => {
+    return HttpResponse.json(
+      mockUsers[0],
+    )
   }),
 
-  http.get(`${getBaseUrl()}/users`, () => {
-    return HttpResponse.json(mockUsers)
+  http.get(`${getBaseUrl()}/api/users`, () => {
+    return HttpResponse.json(
+      mockUsers,
+    )
   }),
 
-  http.post(`${getBaseUrl()}/users`, async ({ request }) => {
+  http.post(`${getBaseUrl()}/api/users`, async ({ request }) => {
     const newUser = (await request.json()) as any
     const user = {
       id: `user-${Date.now()}`,
@@ -240,7 +259,7 @@ export const handlers = [
     return HttpResponse.json(user, { status: 201 })
   }),
 
-  http.get(`${getBaseUrl()}/users/:id`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/users/:id`, ({ params }) => {
     const user = mockUsers.find((u) => u.id === params.id)
     if (!user) {
       return HttpResponse.json(
@@ -251,7 +270,7 @@ export const handlers = [
     return HttpResponse.json(user)
   }),
 
-  http.patch(`${getBaseUrl()}/users/:id`, async ({ params, request }) => {
+  http.patch(`${getBaseUrl()}/api/users/:id`, async ({ params, request }) => {
     const userIndex = mockUsers.findIndex((u) => u.id === params.id)
     if (userIndex === -1) {
       return HttpResponse.json(
@@ -264,7 +283,7 @@ export const handlers = [
     return HttpResponse.json(mockUsers[userIndex])
   }),
 
-  http.delete(`${getBaseUrl()}/users/:id`, ({ params }) => {
+  http.delete(`${getBaseUrl()}/api/users/:id`, ({ params }) => {
     const userIndex = mockUsers.findIndex((u) => u.id === params.id)
     if (userIndex === -1) {
       return HttpResponse.json(
@@ -276,7 +295,7 @@ export const handlers = [
     return HttpResponse.json(deletedUser)
   }),
 
-  http.post(`${getBaseUrl()}/users/:id/change-password`, async ({ params, request }) => {
+  http.post(`${getBaseUrl()}/api/users/:id/change-password`, async ({ params, request }) => {
     const user = mockUsers.find((u) => u.id === params.id)
     if (!user) {
       return HttpResponse.json(
@@ -287,7 +306,7 @@ export const handlers = [
     return HttpResponse.json({ message: '密码修改成功' })
   }),
 
-  http.post(`${getBaseUrl()}/users/:id/reset-password`, async ({ params }) => {
+  http.post(`${getBaseUrl()}/api/users/:id/reset-password`, async ({ params }) => {
     const user = mockUsers.find((u) => u.id === params.id)
     if (!user) {
       return HttpResponse.json(
@@ -300,13 +319,11 @@ export const handlers = [
   }),
 
   // ==================== 模型相关 ====================
-  http.get(`${getBaseUrl()}/models`, () => {
-    return HttpResponse.json({
-      data: mockModels,
-    })
+  http.get(`${getBaseUrl()}/api/models`, () => {
+    return HttpResponse.json(mockModels)
   }),
 
-  http.post(`${getBaseUrl()}/models`, async ({ request }) => {
+  http.post(`${getBaseUrl()}/api/models`, async ({ request }) => {
     const newModel = (await request.json()) as any
     const model = {
       id: `model-${Date.now()}`,
@@ -314,10 +331,10 @@ export const handlers = [
       createdAt: new Date().toISOString(),
     }
     mockModels.push(model)
-    return HttpResponse.json({ data: model }, { status: 201 })
+    return HttpResponse.json(model, { status: 201 })
   }),
 
-  http.get(`${getBaseUrl()}/models/:id`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/models/:id`, ({ params }) => {
     const model = mockModels.find((m) => m.id === params.id)
     if (!model) {
       return HttpResponse.json(
@@ -325,10 +342,10 @@ export const handlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json({ data: model })
+    return HttpResponse.json(model)
   }),
 
-  http.patch(`${getBaseUrl()}/models/:id`, async ({ params, request }) => {
+  http.patch(`${getBaseUrl()}/api/models/:id`, async ({ params, request }) => {
     const modelIndex = mockModels.findIndex((m) => m.id === params.id)
     if (modelIndex === -1) {
       return HttpResponse.json(
@@ -338,10 +355,10 @@ export const handlers = [
     }
     const updateData = (await request.json()) as any
     mockModels[modelIndex] = { ...mockModels[modelIndex], ...updateData }
-    return HttpResponse.json({ data: mockModels[modelIndex] })
+    return HttpResponse.json(mockModels[modelIndex])
   }),
 
-  http.delete(`${getBaseUrl()}/models/:id`, ({ params }) => {
+  http.delete(`${getBaseUrl()}/api/models/:id`, ({ params }) => {
     const modelIndex = mockModels.findIndex((m) => m.id === params.id)
     if (modelIndex === -1) {
       return HttpResponse.json(
@@ -350,17 +367,17 @@ export const handlers = [
       )
     }
     const deletedModel = mockModels.splice(modelIndex, 1)[0]
-    return HttpResponse.json({ data: deletedModel })
+    return HttpResponse.json(deletedModel)
   }),
 
   // ==================== 数据集相关 ====================
-  http.get(`${getBaseUrl()}/datasets`, () => {
-    return HttpResponse.json({
-      data: mockDatasets,
-    })
+  http.get(`${getBaseUrl()}/api/datasets`, () => {
+    return HttpResponse.json(
+      mockDatasets,
+    )
   }),
 
-  http.post(`${getBaseUrl()}/datasets`, async ({ request }) => {
+  http.post(`${getBaseUrl()}/api/datasets`, async ({ request }) => {
     const newDataset = (await request.json()) as any
     const dataset = {
       id: `dataset-${Date.now()}`,
@@ -368,10 +385,10 @@ export const handlers = [
       createdAt: new Date().toISOString(),
     }
     mockDatasets.push(dataset)
-    return HttpResponse.json({ data: dataset }, { status: 201 })
+    return HttpResponse.json(dataset, { status: 201 })
   }),
 
-  http.get(`${getBaseUrl()}/datasets/:id`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/datasets/:id`, ({ params }) => {
     const dataset = mockDatasets.find((d) => d.id === params.id)
     if (!dataset) {
       return HttpResponse.json(
@@ -379,10 +396,10 @@ export const handlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json({ data: dataset })
+    return HttpResponse.json(dataset)
   }),
 
-  http.patch(`${getBaseUrl()}/datasets/:id`, async ({ params, request }) => {
+  http.patch(`${getBaseUrl()}/api/datasets/:id`, async ({ params, request }) => {
     const datasetIndex = mockDatasets.findIndex((d) => d.id === params.id)
     if (datasetIndex === -1) {
       return HttpResponse.json(
@@ -392,10 +409,10 @@ export const handlers = [
     }
     const updateData = (await request.json()) as any
     mockDatasets[datasetIndex] = { ...mockDatasets[datasetIndex], ...updateData }
-    return HttpResponse.json({ data: mockDatasets[datasetIndex] })
+    return HttpResponse.json(mockDatasets[datasetIndex])
   }),
 
-  http.delete(`${getBaseUrl()}/datasets/:id`, ({ params }) => {
+  http.delete(`${getBaseUrl()}/api/datasets/:id`, ({ params }) => {
     const datasetIndex = mockDatasets.findIndex((d) => d.id === params.id)
     if (datasetIndex === -1) {
       return HttpResponse.json(
@@ -404,10 +421,10 @@ export const handlers = [
       )
     }
     const deletedDataset = mockDatasets.splice(datasetIndex, 1)[0]
-    return HttpResponse.json({ data: deletedDataset })
+    return HttpResponse.json(deletedDataset)
   }),
 
-  http.get(`${getBaseUrl()}/datasets/:id/download-url`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/datasets/:id/download-url`, ({ params }) => {
     const dataset = mockDatasets.find((d) => d.id === params.id)
     if (!dataset) {
       return HttpResponse.json(
@@ -416,21 +433,17 @@ export const handlers = [
       )
     }
     return HttpResponse.json({
-      data: {
-        url: `https://example.com/datasets/${params.id}/download`,
-      },
+      url: `https://example.com/datasets/${params.id}/download`,
     })
   }),
 
   http.get(`${getBaseUrl()}/datasets/:id/upload-url`, ({ params }) => {
     return HttpResponse.json({
-      data: {
-        url: `https://example.com/datasets/${params.id}/upload`,
-      },
+      url: `https://example.com/datasets/${params.id}/upload`,
     })
   }),
 
-  http.get(`${getBaseUrl()}/datasets/:id/preview`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/datasets/:id/preview`, ({ params }) => {
     const dataset = mockDatasets.find((d) => d.id === params.id)
     if (!dataset) {
       return HttpResponse.json(
@@ -439,28 +452,26 @@ export const handlers = [
       )
     }
     return HttpResponse.json({
-      data: {
-        content: JSON.stringify(
-          [
-            { text: '示例数据1', label: '标签1' },
-            { text: '示例数据2', label: '标签2' },
-            { text: '示例数据3', label: '标签3' },
-          ],
-          null,
-          2
-        ),
-      },
+      content: JSON.stringify(
+        [
+          { text: '示例数据1', label: '标签1' },
+          { text: '示例数据2', label: '标签2' },
+          { text: '示例数据3', label: '标签3' },
+        ],
+        null,
+        2
+      ),
     })
   }),
 
   // ==================== 任务相关 ====================
-  http.get(`${getBaseUrl()}/tasks`, () => {
-    return HttpResponse.json({
-      data: mockTasks,
-    })
+  http.get(`${getBaseUrl()}/api/tasks`, () => {
+    return HttpResponse.json(
+      mockTasks,
+    )
   }),
 
-  http.post(`${getBaseUrl()}/tasks`, async ({ request }) => {
+  http.post(`${getBaseUrl()}/api/tasks`, async ({ request }) => {
     const newTask = (await request.json()) as any
     const task = {
       id: `task-${Date.now()}`,
@@ -472,10 +483,10 @@ export const handlers = [
       completedAt: null,
     }
     mockTasks.push(task)
-    return HttpResponse.json({ data: task }, { status: 201 })
+    return HttpResponse.json(task, { status: 201 })
   }),
 
-  http.get(`${getBaseUrl()}/tasks/:id`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/tasks/:id`, ({ params }) => {
     const task = mockTasks.find((t) => t.id === params.id)
     if (!task) {
       return HttpResponse.json(
@@ -483,10 +494,10 @@ export const handlers = [
         { status: 404 }
       )
     }
-    return HttpResponse.json({ data: task })
+    return HttpResponse.json(task)
   }),
 
-  http.patch(`${getBaseUrl()}/tasks/:id`, async ({ params, request }) => {
+  http.patch(`${getBaseUrl()}/api/tasks/:id`, async ({ params, request }) => {
     const taskIndex = mockTasks.findIndex((t) => t.id === params.id)
     if (taskIndex === -1) {
       return HttpResponse.json(
@@ -496,10 +507,10 @@ export const handlers = [
     }
     const updateData = (await request.json()) as any
     mockTasks[taskIndex] = { ...mockTasks[taskIndex], ...updateData }
-    return HttpResponse.json({ data: mockTasks[taskIndex] })
+    return HttpResponse.json(mockTasks[taskIndex])
   }),
 
-  http.delete(`${getBaseUrl()}/tasks/:id`, ({ params }) => {
+  http.delete(`${getBaseUrl()}/api/tasks/:id`, ({ params }) => {
     const taskIndex = mockTasks.findIndex((t) => t.id === params.id)
     if (taskIndex === -1) {
       return HttpResponse.json(
@@ -508,10 +519,10 @@ export const handlers = [
       )
     }
     const deletedTask = mockTasks.splice(taskIndex, 1)[0]
-    return HttpResponse.json({ data: deletedTask })
+    return HttpResponse.json(deletedTask)
   }),
 
-  http.post(`${getBaseUrl()}/tasks/:id/stop`, ({ params }) => {
+  http.post(`${getBaseUrl()}/api/tasks/:id/stop`, ({ params }) => {
     const task = mockTasks.find((t) => t.id === params.id)
     if (!task) {
       return HttpResponse.json(
@@ -520,51 +531,47 @@ export const handlers = [
       )
     }
     task.status = 'STOPPED'
-    return HttpResponse.json({ data: task })
+    return HttpResponse.json(task)
   }),
 
-  http.get(`${getBaseUrl()}/tasks/:id/logs`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/tasks/:id/logs`, ({ params }) => {
     return HttpResponse.json({
-      data: {
-        logs: [
-          '[2024-01-10 10:05:00] 任务已启动',
-          '[2024-01-10 10:06:00] 加载模型: Llama 2 7B',
-          '[2024-01-10 10:07:00] 加载数据集: WikiText-103',
-          '[2024-01-10 10:08:00] 开始训练...',
-          '[2024-01-10 10:15:00] Epoch 1/10 - Loss: 4.2345',
-          '[2024-01-10 10:25:00] Epoch 2/10 - Loss: 3.9876',
-          '[2024-01-10 10:35:00] Epoch 3/10 - Loss: 3.7654',
-          '[2024-01-10 10:45:00] Epoch 4/10 - Loss: 3.5432',
-          '[2024-01-10 10:55:00] Epoch 5/10 - Loss: 3.3210',
-          '[2024-01-10 11:05:00] 保存检查点: checkpoint-500',
-          '[2024-01-10 15:30:00] 训练完成！',
-          '[2024-01-10 15:31:00] 模型已保存到: models/llama-2-7b-finetuned',
-        ],
-      },
+      logs: [
+        '[2024-01-10 10:05:00] 任务已启动',
+        '[2024-01-10 10:06:00] 加载模型: Llama 2 7B',
+        '[2024-01-10 10:07:00] 加载数据集: WikiText-103',
+        '[2024-01-10 10:08:00] 开始训练...',
+        '[2024-01-10 10:15:00] Epoch 1/10 - Loss: 4.2345',
+        '[2024-01-10 10:25:00] Epoch 2/10 - Loss: 3.9876',
+        '[2024-01-10 10:35:00] Epoch 3/10 - Loss: 3.7654',
+        '[2024-01-10 10:45:00] Epoch 4/10 - Loss: 3.5432',
+        '[2024-01-10 10:55:00] Epoch 5/10 - Loss: 3.3210',
+        '[2024-01-10 11:05:00] 保存检查点: checkpoint-500',
+        '[2024-01-10 15:30:00] 训练完成！',
+        '[2024-01-10 15:31:00] 模型已保存到: models/llama-2-7b-finetuned',
+      ],
     })
   }),
 
-  http.get(`${getBaseUrl()}/tasks/:id/metrics`, ({ params }) => {
+  http.get(`${getBaseUrl()}/api/tasks/:id/metrics`, ({ params }) => {
     return HttpResponse.json({
-      data: {
-        metrics: {
-          trainingLoss: 3.2345,
-          validationLoss: 3.5678,
-          accuracy: 0.8765,
-          f1Score: 0.8543,
-          precision: 0.8890,
-          recall: 0.8320,
-          throughput: 125.43,
-          gpuMemory: 6.5,
-        },
+      metrics: {
+        trainingLoss: 3.2345,
+        validationLoss: 3.5678,
+        accuracy: 0.8765,
+        f1Score: 0.8543,
+        precision: 0.8890,
+        recall: 0.8320,
+        throughput: 125.43,
+        gpuMemory: 6.5,
       },
     })
   }),
 
   // ==================== 资源相关 ====================
-  http.get(`${getBaseUrl()}/resources`, () => {
-    return HttpResponse.json({
-      data: mockResources,
-    })
+  http.get(`${getBaseUrl()}/api/resources`, () => {
+    return HttpResponse.json(
+      mockResources,
+    )
   }),
 ]
