@@ -6,12 +6,7 @@
         <h1 class="page-title">任务管理</h1>
         <p class="page-subtitle">创建、监控和管理训练/推理任务</p>
       </div>
-      <v-btn
-        @click="openCreateTaskDialog"
-        color="primary"
-        prepend-icon="mdi-plus"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateTaskDialog" color="primary" prepend-icon="mdi-plus" variant="elevated">
         创建任务
       </v-btn>
     </div>
@@ -21,14 +16,8 @@
 
     <!-- 任务表格 -->
     <v-card v-if="tasks.length > 0" class="task-table-card mt-6" elevation="2">
-      <v-data-table
-        :headers="tableHeaders"
-        :items="tasks"
-        :loading="loading"
-        :items-per-page="10"
-        class="task-table"
-        hover
-      >
+      <v-data-table :headers="tableHeaders" :items="tasks" :loading="loading" :items-per-page="10" class="task-table"
+        hover>
         <!-- 任务名称列 -->
         <template v-slot:item.name="{ item }">
           <div class="d-flex align-center">
@@ -59,34 +48,16 @@
         <!-- 操作列 -->
         <template v-slot:item.actions="{ item }">
           <div class="action-buttons">
-            <v-btn
-              @click="viewTaskDetails(item)"
-              icon="mdi-eye"
-              variant="text"
-              size="small"
-              color="primary"
-            >
+            <v-btn @click="viewTaskDetails(item)" icon="mdi-eye" variant="text" size="small" color="primary">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">查看详情</v-tooltip>
             </v-btn>
-            <v-btn
-              v-if="item.status === 'RUNNING'"
-              @click="stopTask(item)"
-              icon="mdi-stop-circle"
-              variant="text"
-              size="small"
-              color="warning"
-            >
+            <v-btn v-if="item.status === 'RUNNING'" @click="stopTask(item)" icon="mdi-stop-circle" variant="text"
+              size="small" color="warning">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">停止</v-tooltip>
             </v-btn>
-            <v-btn
-              @click="deleteTask(item)"
-              icon="mdi-delete"
-              variant="text"
-              size="small"
-              color="error"
-            >
+            <v-btn @click="deleteTask(item)" icon="mdi-delete" variant="text" size="small" color="error">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">删除</v-tooltip>
             </v-btn>
@@ -96,21 +67,11 @@
     </v-card>
 
     <!-- 空状态 -->
-    <v-empty-state
-      v-else
-      :image-height="200"
-      headline="暂无任务"
-      title="没有任务记录"
-      text="请创建第一个任务以开始训练或推理"
-    >
+    <v-empty-state v-else :image-height="200" headline="暂无任务" title="没有任务记录" text="请创建第一个任务以开始训练或推理">
       <template v-slot:media>
         <v-icon color="primary" size="100">mdi-clipboard-list-outline</v-icon>
       </template>
-      <v-btn
-        @click="openCreateTaskDialog"
-        color="primary"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateTaskDialog" color="primary" variant="elevated">
         创建第一个任务
       </v-btn>
     </v-empty-state>
@@ -130,64 +91,24 @@
           <v-form ref="taskForm" v-model="formValid" @submit.prevent="saveTask">
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="taskFormData.name"
-                  label="任务名称"
-                  :rules="nameRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-text-field v-model="taskFormData.name" label="任务名称" :rules="nameRules" variant="outlined"
+                  density="comfortable" required />
               </v-col>
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="taskFormData.type"
-                  label="任务类型"
-                  :items="taskTypes"
-                  item-title="label"
-                  item-value="value"
-                  :rules="typeRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-select v-model="taskFormData.type" label="任务类型" :items="taskTypes" item-title="label"
+                  item-value="value" :rules="typeRules" variant="outlined" density="comfortable" required />
               </v-col>
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="taskFormData.modelId"
-                  label="选择模型"
-                  :items="models"
-                  item-title="name"
-                  item-value="id"
-                  :rules="modelRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-select v-model="taskFormData.modelId" label="选择模型" :items="models" item-title="name" item-value="id"
+                  :rules="modelRules" variant="outlined" density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-select
-                  v-model="taskFormData.datasetId"
-                  label="选择数据集"
-                  :items="datasets"
-                  item-title="name"
-                  item-value="id"
-                  :rules="datasetRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-select v-model="taskFormData.datasetId" label="选择数据集" :items="datasets" item-title="name"
+                  item-value="id" :rules="datasetRules" variant="outlined" density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-textarea
-                  v-model="taskConfigJson"
-                  label="任务配置 (JSON)"
-                  hint="输入 JSON 格式的配置参数"
-                  persistent-hint
-                  variant="outlined"
-                  density="comfortable"
-                  rows="4"
-                />
+                <v-textarea v-model="taskConfigJson" label="任务配置 (JSON)" hint="输入 JSON 格式的配置参数" persistent-hint
+                  variant="outlined" density="comfortable" rows="4" />
               </v-col>
             </v-row>
           </v-form>
@@ -204,9 +125,9 @@
     </v-dialog>
 
     <!-- 任务详情对话框 -->
-    <v-dialog v-model="detailsDialog" max-width="700px">
+    <v-dialog v-model="detailsDialog" max-width="1500px" max-height="1000px">
       <v-card v-if="selectedTask">
-        <v-card-title class="d-flex align-center">
+        <v-card-title class=" d-flex align-center">
           <span>任务详情: {{ selectedTask.name }}</span>
           <v-spacer />
           <v-btn @click="detailsDialog = false" icon variant="text" size="small">
@@ -248,26 +169,24 @@
                 <pre class="config-display">{{ JSON.stringify(selectedTask.config, null, 2) }}</pre>
               </div>
             </v-col>
+
+            <v-col cols="12">
+              <div class="detail-item" style="height: 800px;">
+                <strong>任务图表:</strong>
+                <div class="chart-frame">
+                  <iframe v-if="chartHtml" :srcdoc="chartHtml"
+                    style="width: 100%; height: 1000px; border: none;"></iframe>
+                  <v-skeleton-loader v-else type="image"></v-skeleton-loader>
+                </div>
+              </div>
+            </v-col>
           </v-row>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            v-if="selectedTask.status === 'RUNNING'"
-            @click="stopTask(selectedTask)"
-            color="warning"
-            variant="elevated"
-          >
-            停止任务
-          </v-btn>
-          <v-btn
-            @click="detailsDialog = false"
-            color="primary"
-            variant="text"
-          >
-            关闭
-          </v-btn>
+          <v-btn v-if="selectedTask.status === 'RUNNING'" @click="stopTask(selectedTask)" color="warning"
+            variant="elevated">停止</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -275,8 +194,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { taskApi, modelApi, datasetApi } from '@/api'
+import { ref, computed, onMounted, watch } from 'vue'
+import { taskApi, modelApi, datasetApi, htmlApi } from '@/api'
 import type { Task, Model, Dataset } from '@/api/types'
 
 // 响应式数据
@@ -291,6 +210,7 @@ const loading = ref(false)
 const saving = ref(false)
 const selectedTask = ref<Task | null>(null)
 const taskConfigJson = ref('{}')
+const chartHtml = ref<string>('')
 
 const tableHeaders = [
   { title: '任务名称', value: 'name', sortable: true },
@@ -465,6 +385,25 @@ const loadDatasets = async () => {
   }
 }
 
+async function loadTaskChartHtml(taskId: string) {
+  try {
+    const resp = await taskApi.getTaskChart(taskId)
+    const urlOrHtml = resp.data.chartUrl as string
+    const html: string = (await htmlApi.getHtml(urlOrHtml)).data
+    chartHtml.value = html
+  } catch (e) {
+    chartHtml.value = '<div style="padding:16px;color:#888;">无法加载图表</div>'
+  }
+}
+
+watch([detailsDialog, selectedTask], async ([open, task]) => {
+  if (open && task?.id) {
+    loadTasks();
+    chartHtml.value = ''
+    await loadTaskChartHtml(task.id)
+  }
+})
+
 // 生命周期钩子
 onMounted(() => {
   loadTasks()
@@ -474,6 +413,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.chart-frame {
+  width: 100%;
+  min-height: 500px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .task-management {
   padding: 24px;
 }
@@ -507,7 +455,6 @@ onMounted(() => {
 }
 
 .details-content {
-  max-height: 500px;
   overflow-y: auto;
 }
 

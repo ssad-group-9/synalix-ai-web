@@ -137,6 +137,11 @@ export interface TaskMetrics {
   timestamp: string
 }
 
+export interface TaskChart {
+  taskId: string
+  chartUrl: string
+}
+
 // ========== Resource Types ==========
 export interface Resource {
   id: number

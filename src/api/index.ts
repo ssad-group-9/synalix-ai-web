@@ -18,6 +18,7 @@ import type {
   Task,
   CreateTaskRequest,
   TaskMetrics,
+  TaskChart,
   Resource,
 } from './types'
 
@@ -119,10 +120,18 @@ export const taskApi = {
 
   // 获取任务指标
   getTaskMetrics: (id: string) => apiClient.get<TaskMetrics[]>(`/api/tasks/${id}/metrics`),
+
+
+  getTaskChart: (id: string) => apiClient.get<TaskChart>(`/api/tasks/${id}/chart`),
 }
 
 // ========== Resource API ==========
 export const resourceApi = {
   // 获取GPU资源列表及状态
   getResources: () => apiClient.get<Resource[]>('/api/resources'),
+}
+
+export const htmlApi = {
+  // 获取GPU资源列表及状态
+  getHtml: (url: string) => apiClient.get<string>(url),
 }
