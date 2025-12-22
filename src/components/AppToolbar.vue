@@ -59,8 +59,8 @@ const navigationItems = [
     { name: 'overview', title: '概览', to: '/overview' },
     { name: 'model-center', title: '模型中心', to: '/model-center' },
     { name: 'task-management', title: '任务管理', to: '/task-management' },
-    { name: 'dataset-management', title: '数据集管理', to: '/dataset-management' }
-    // 可以在这里扩展更多导航项目
+    { name: 'dataset-management', title: '数据集管理', to: '/dataset-management' },
+    { name: 'chat', title: '聊天交互', to: '/chat' }
 ]
 
 // 计算用户头像URL

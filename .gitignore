@@ -34,3 +34,6 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# doc when coding for looking up
+/doc
