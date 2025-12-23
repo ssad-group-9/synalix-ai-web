@@ -238,6 +238,8 @@ const saveDataset = async () => {
           'Content-Type': file.type,
         },
       })
+
+      await datasetApi.updateDataset(dataset.data.id)
     }
 
     closeDatasetDialog()

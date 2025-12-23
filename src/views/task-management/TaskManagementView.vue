@@ -102,9 +102,16 @@
                 <v-select v-model="taskFormData.modelId" label="选择模型" :items="models" item-title="name" item-value="id"
                   :rules="modelRules" variant="outlined" density="comfortable" required />
               </v-col>
-              <v-col cols="12">
+              <v-col cols=" 12" v-if="taskFormData.type === 'TRAINING'">
                 <v-select v-model="taskFormData.datasetId" label="选择数据集" :items="datasets" item-title="name"
                   item-value="id" :rules="datasetRules" variant="outlined" density="comfortable" required />
+              </v-col>
+              <v-col cols=" 12" v-else-if="taskFormData.type === 'INFERENCE'">
+                <v-select v-model="taskFormData.checkpointId" label="选择模型检查点" :items="modelChceckpoints"
+                  item-title="name" item-value="id" variant="outlined" density="comfortable" />
+
+                <v-select v-model="taskFormData.checkpointId" label="选择Lora检查点" :items="adaptorCheckpoints"
+                  item-title="name" item-value="id" variant="outlined" density="comfortable" />
               </v-col>
               <v-col cols="12">
                 <v-textarea v-model="taskConfigJson" label="任务配置 (JSON)" hint="输入 JSON 格式的配置参数" persistent-hint
@@ -195,13 +202,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { taskApi, modelApi, datasetApi, htmlApi } from '@/api'
-import type { Task, Model, Dataset } from '@/api/types'
+import { taskApi, modelApi, datasetApi, htmlApi, checkpointsApi } from '@/api'
+import type { Task, Model, Dataset, Checkpoints } from '@/api/types'
 
 // 响应式数据
 const tasks = ref<Task[]>([])
 const models = ref<Model[]>([])
 const datasets = ref<Dataset[]>([])
+const checkpoints = ref<Checkpoints[]>([])
+const modelChceckpoints = ref<Checkpoints[]>([])
+const adaptorCheckpoints = ref<Checkpoints[]>([])
 const taskDialog = ref(false)
 const detailsDialog = ref(false)
 const taskForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
@@ -230,6 +240,7 @@ const taskFormData = ref({
   type: 'TRAINING',
   modelId: '',
   datasetId: '',
+  checkpointId: '',
 })
 
 // 验证规则
@@ -285,6 +296,7 @@ const openCreateTaskDialog = () => {
     type: 'TRAINING',
     modelId: '',
     datasetId: '',
+    checkpointId: '',
   }
   taskConfigJson.value = '{}'
   taskDialog.value = true
@@ -385,6 +397,31 @@ const loadDatasets = async () => {
   }
 }
 
+function splitCheckpointsByType(list: Checkpoints[]) {
+  const model: Checkpoints[] = []
+  const adapter: Checkpoints[] = []
+  for (const cp of list) {
+    if (cp.type === 'MODEL') model.push(cp)
+    else if (cp.type === 'ADAPTER') adapter.push(cp)
+  }
+  modelChceckpoints.value = model
+  adaptorCheckpoints.value = adapter
+}
+
+const loadCheckpoints = async (modelId: string) => {
+  try {
+    const response = await checkpointsApi.getCheckpoints(modelId)
+    checkpoints.value = response.data
+    console.log('加载检查点:', checkpoints.value)
+    splitCheckpointsByType(checkpoints.value)
+  } catch (error) {
+    checkpoints.value = []
+    modelChceckpoints.value = []
+    adaptorCheckpoints.value = []
+    console.error('加载检查点失败:', error)
+  }
+}
+
 async function loadTaskChartHtml(taskId: string) {
   try {
     const resp = await taskApi.getTaskChart(taskId)
@@ -401,6 +438,12 @@ watch([detailsDialog, selectedTask], async ([open, task]) => {
     loadTasks();
     chartHtml.value = ''
     await loadTaskChartHtml(task.id)
+  }
+})
+
+watch(() => taskFormData.value.modelId, async (modelId) => {
+  if (taskFormData.value.type === 'INFERENCE' && modelId) {
+    await loadCheckpoints(modelId)
   }
 })
 
