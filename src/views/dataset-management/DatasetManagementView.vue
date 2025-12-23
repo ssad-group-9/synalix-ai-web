@@ -239,7 +239,7 @@ const saveDataset = async () => {
         },
       })
 
-      await datasetApi.updateDataset(dataset.data.id)
+      // await datasetApi.updateDataset(dataset.data.id)
     }
 
     closeDatasetDialog()
