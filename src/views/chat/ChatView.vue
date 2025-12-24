@@ -51,7 +51,7 @@
           <div class="messages-area">
             <v-progress-linear v-if="loading" indeterminate color="primary" />
 
-            <v-empty-state v-if="messages.length === 0 && !selectedModelId" :image-height="200" headline="选择模型开始聊天"
+            <v-empty-state v-if="messages.length === 0 && !selectedModelName" :image-height="200" headline="选择模型开始聊天"
               text="请先从左侧选择一个模型">
               <template v-slot:media>
                 <v-icon color="primary" size="100">mdi-robot-outline</v-icon>
