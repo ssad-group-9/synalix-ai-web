@@ -96,6 +96,14 @@ export interface Dataset {
   createdAt: string
 }
 
+export interface Checkpoints {
+  id: string
+  name: string
+  type: string
+  version: string
+  createdAt: string
+}
+
 export interface CreateDatasetRequest {
   name: string
   description: string
@@ -137,6 +145,11 @@ export interface TaskMetrics {
   timestamp: string
 }
 
+export interface TaskChart {
+  taskId: string
+  chartUrl: string
+}
+
 // ========== Resource Types ==========
 export interface Resource {
   id: number
@@ -144,4 +157,44 @@ export interface Resource {
   status: 'AVAILABLE' | 'BUSY' | 'OFFLINE'
   memoryTotal: number
   memoryUsed: number
+}
+
+// ========== Chat Types ==========
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+  tool_calls?: unknown | null
+}
+
+export interface ChatChoice {
+  index: number
+  message: ChatMessage
+  finish_reason: string
+}
+
+export interface ChatUsage {
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+}
+
+export interface ChatCompletionsRequest {
+  completions: {
+    model: string
+    messages: ChatMessage[]
+    max_completion_tokens: number
+  }
+}
+
+export interface ChatCompletionsResponse {
+  message: string
+  response: {
+    id: string
+    object: string
+    created: number
+    model: string
+    choices: ChatChoice[]
+    usage: ChatUsage
+  }
+  sent_to_port: string
 }

@@ -6,12 +6,7 @@
         <h1 class="page-title">数据集管理</h1>
         <p class="page-subtitle">上传、预处理和管理数据集</p>
       </div>
-      <v-btn
-        @click="openCreateDatasetDialog"
-        color="primary"
-        prepend-icon="mdi-plus"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateDatasetDialog" color="primary" prepend-icon="mdi-plus" variant="elevated">
         创建数据集
       </v-btn>
     </div>
@@ -21,14 +16,8 @@
 
     <!-- 数据集表格 -->
     <v-card v-if="datasets.length > 0" class="dataset-table-card mt-6" elevation="2">
-      <v-data-table
-        :headers="tableHeaders"
-        :items="datasets"
-        :loading="loading"
-        :items-per-page="10"
-        class="dataset-table"
-        hover
-      >
+      <v-data-table :headers="tableHeaders" :items="datasets" :loading="loading" :items-per-page="10"
+        class="dataset-table" hover>
         <!-- 名称列 -->
         <template v-slot:item.name="{ item }">
           <div class="d-flex align-center">
@@ -55,33 +44,15 @@
         <!-- 操作列 -->
         <template v-slot:item.actions="{ item }">
           <div class="action-buttons">
-            <v-btn
-              @click="downloadDataset(item)"
-              icon="mdi-download"
-              variant="text"
-              size="small"
-              color="primary"
-            >
+            <v-btn @click="downloadDataset(item)" icon="mdi-download" variant="text" size="small" color="primary">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">下载</v-tooltip>
             </v-btn>
-            <v-btn
-              @click="previewDataset(item)"
-              icon="mdi-eye"
-              variant="text"
-              size="small"
-              color="info"
-            >
+            <v-btn @click="previewDataset(item)" icon="mdi-eye" variant="text" size="small" color="info">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">预览</v-tooltip>
             </v-btn>
-            <v-btn
-              @click="deleteDataset(item)"
-              icon="mdi-delete"
-              variant="text"
-              size="small"
-              color="error"
-            >
+            <v-btn @click="deleteDataset(item)" icon="mdi-delete" variant="text" size="small" color="error">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">删除</v-tooltip>
             </v-btn>
@@ -91,21 +62,11 @@
     </v-card>
 
     <!-- 空状态 -->
-    <v-empty-state
-      v-else
-      :image-height="200"
-      headline="暂无数据集"
-      title="没有可用的数据集"
-      text="请先创建或上传数据集以开始训练"
-    >
+    <v-empty-state v-else :image-height="200" headline="暂无数据集" title="没有可用的数据集" text="请先创建或上传数据集以开始训练">
       <template v-slot:media>
         <v-icon color="primary" size="100">mdi-database-outline</v-icon>
       </template>
-      <v-btn
-        @click="openCreateDatasetDialog"
-        color="primary"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateDatasetDialog" color="primary" variant="elevated">
         创建第一个数据集
       </v-btn>
     </v-empty-state>
@@ -125,35 +86,16 @@
           <v-form ref="datasetForm" v-model="formValid" @submit.prevent="saveDataset">
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="datasetFormData.name"
-                  label="数据集名称"
-                  :rules="nameRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-text-field v-model="datasetFormData.name" label="数据集名称" :rules="nameRules" variant="outlined"
+                  density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-textarea
-                  v-model="datasetFormData.description"
-                  label="描述"
-                  :rules="descriptionRules"
-                  variant="outlined"
-                  density="comfortable"
-                  rows="3"
-                />
+                <v-textarea v-model="datasetFormData.description" label="描述" :rules="descriptionRules"
+                  variant="outlined" density="comfortable" rows="3" />
               </v-col>
               <v-col cols="12">
-                <v-file-input
-                  v-model="selectedFile"
-                  label="选择文件"
-                  hint="支持.json、.jsonl、.txt、.csv 格式"
-                  persistent-hint
-                  variant="outlined"
-                  density="comfortable"
-                  accept=".json,.jsonl,.txt,.csv"
-                />
+                <v-file-input v-model="selectedFile" label="选择文件" hint="支持.json、.jsonl、.txt、.csv 格式" persistent-hint
+                  variant="outlined" density="comfortable" accept=".json,.jsonl,.txt,.csv" />
               </v-col>
             </v-row>
           </v-form>
@@ -206,7 +148,7 @@ const formValid = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const loadingPreview = ref(false)
-const selectedFile = ref<File[]>([])
+const selectedFile = ref<File | null>(null)
 const selectedDataset = ref<Dataset | null>(null)
 const previewContent = ref('')
 
@@ -255,7 +197,7 @@ const openCreateDatasetDialog = () => {
     name: '',
     description: '',
   }
-  selectedFile.value = []
+  selectedFile.value = null
   datasetDialog.value = true
 }
 
@@ -265,7 +207,7 @@ const closeDatasetDialog = () => {
     name: '',
     description: '',
   }
-  selectedFile.value = []
+  selectedFile.value = null
 }
 
 const saveDataset = async () => {
@@ -279,11 +221,15 @@ const saveDataset = async () => {
       description: datasetFormData.value.description,
     })
 
+    console.log(selectedFile.value)
+
     // 如果选择了文件，则上传
-    if (selectedFile.value.length > 0) {
-      const file = selectedFile.value[0]
+    if (selectedFile.value) {
+      const file = selectedFile.value
       // 获取上传URL
+      console.log(file)
       const urlResponse = await datasetApi.getUploadUrl(dataset.data.id)
+      console.log(urlResponse)
       // 使用上传URL上传文件
       await fetch(urlResponse.data.url, {
         method: urlResponse.data.method,
@@ -292,6 +238,8 @@ const saveDataset = async () => {
           'Content-Type': file.type,
         },
       })
+
+      // await datasetApi.updateDataset(dataset.data.id)
     }
 
     closeDatasetDialog()

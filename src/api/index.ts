@@ -18,7 +18,11 @@ import type {
   Task,
   CreateTaskRequest,
   TaskMetrics,
+  TaskChart,
   Resource,
+  Checkpoints,
+  ChatCompletionsRequest,
+  ChatCompletionsResponse,
 } from './types'
 
 export const authApi = {
@@ -78,6 +82,10 @@ export const modelApi = {
   deleteModel: (id: string) => apiClient.delete<void>(`/api/models/${id}`),
 }
 
+export const checkpointsApi = {
+  getCheckpoints: (id: string) => apiClient.get<Checkpoints[]>(`/api/checkpoints/${id}`),
+}
+
 // ========== Dataset API ==========
 export const datasetApi = {
   // 获取数据集列表
@@ -97,6 +105,8 @@ export const datasetApi = {
 
   // 获取下载URL
   getDownloadUrl: (id: string) => apiClient.get<UploadUrlResponse>(`/api/datasets/${id}/download-url`),
+
+  updateDataset: (id: string) => apiClient.post<Boolean>(`/api/datasets/${id}/update-dataset`),
 }
 
 // ========== Task API ==========
@@ -119,10 +129,32 @@ export const taskApi = {
 
   // 获取任务指标
   getTaskMetrics: (id: string) => apiClient.get<TaskMetrics[]>(`/api/tasks/${id}/metrics`),
+
+
+  getTaskChart: (id: string) => apiClient.get<TaskChart>(`/api/tasks/${id}/chart`),
+}
+
+// ========== Chat API ==========
+export const chatApi = {
+  /**
+   * 发送聊天补全请求到后端 /api/chat/{id}/completions
+   * @param taskId 后端任务 id（路径中的 {id}）
+   * @param payload 已在前端组装好的 completions 请求体
+   */
+  sendCompletions: (taskId: string, payload: ChatCompletionsRequest) =>
+    apiClient.post<ChatCompletionsResponse>(
+      `/api/chat/${taskId}/completions`,
+      payload,
+    ),
 }
 
 // ========== Resource API ==========
 export const resourceApi = {
   // 获取GPU资源列表及状态
   getResources: () => apiClient.get<Resource[]>('/api/resources'),
+}
+
+export const htmlApi = {
+  // 获取GPU资源列表及状态
+  getHtml: (url: string) => apiClient.get<string>(url),
 }
