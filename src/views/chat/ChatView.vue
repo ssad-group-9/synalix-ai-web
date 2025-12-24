@@ -166,8 +166,11 @@ let conversationIdCounter = 0
 
 // 计算属性
 const selectedModelName = computed(() => {
-  const model = models.value.find((m) => m.id === selectedModelId.value)
-  return model?.name || ''
+  if (selectedTaskId.value != null) {
+    const model = models.value.find((m) => m.id === tasks.value.find((t) => t.id === selectedTaskId.value.id)?.modelId)
+    return model?.name || ''
+  }
+  return ''
 })
 
 // 发送消息
