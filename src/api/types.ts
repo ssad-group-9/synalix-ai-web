@@ -99,6 +99,7 @@ export interface Dataset {
 export interface Checkpoints {
   id: string
   name: string
+  path: string
   type: string
   version: string
   createdAt: string
@@ -133,7 +134,8 @@ export interface CreateTaskRequest {
   name: string
   type: 'TRAINING' | 'INFERENCE'
   modelId: string
-  datasetId: string
+  datasetId?: string
+  gpuIds?: number[]
   config: Record<string, unknown>
 }
 
