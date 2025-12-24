@@ -6,12 +6,7 @@
         <h1 class="page-title">任务管理</h1>
         <p class="page-subtitle">创建、监控和管理训练/推理任务</p>
       </div>
-      <v-btn
-        @click="openCreateTaskDialog"
-        color="primary"
-        prepend-icon="mdi-plus"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateTaskDialog" color="primary" prepend-icon="mdi-plus" variant="elevated">
         创建任务
       </v-btn>
     </div>
@@ -21,14 +16,8 @@
 
     <!-- 任务表格 -->
     <v-card v-if="tasks.length > 0" class="task-table-card mt-6" elevation="2">
-      <v-data-table
-        :headers="tableHeaders"
-        :items="tasks"
-        :loading="loading"
-        :items-per-page="10"
-        class="task-table"
-        hover
-      >
+      <v-data-table :headers="tableHeaders" :items="tasks" :loading="loading" :items-per-page="10" class="task-table"
+        hover>
         <!-- 任务名称列 -->
         <template v-slot:item.name="{ item }">
           <div class="d-flex align-center">
@@ -59,36 +48,14 @@
         <!-- 操作列 -->
         <template v-slot:item.actions="{ item }">
           <div class="action-buttons">
-            <v-btn
-              @click="viewTaskDetails(item)"
-              icon="mdi-eye"
-              variant="text"
-              size="small"
-              color="primary"
-            >
+            <v-btn @click="viewTaskDetails(item)" icon="mdi-eye" variant="text" size="small" color="primary">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">查看详情</v-tooltip>
             </v-btn>
-            <v-btn
-              v-if="item.status === 'RUNNING'"
-              @click="stopTask(item)"
-              icon="mdi-stop-circle"
-              variant="text"
-              size="small"
-              color="warning"
-            >
+            <v-btn v-if="item.status === 'RUNNING'" @click="stopTask(item)" icon="mdi-stop-circle" variant="text"
+              size="small" color="warning">
               <v-icon size="18" />
               <v-tooltip activator="parent" location="top">停止</v-tooltip>
-            </v-btn>
-            <v-btn
-              @click="deleteTask(item)"
-              icon="mdi-delete"
-              variant="text"
-              size="small"
-              color="error"
-            >
-              <v-icon size="18" />
-              <v-tooltip activator="parent" location="top">删除</v-tooltip>
             </v-btn>
           </div>
         </template>
@@ -96,27 +63,17 @@
     </v-card>
 
     <!-- 空状态 -->
-    <v-empty-state
-      v-else
-      :image-height="200"
-      headline="暂无任务"
-      title="没有任务记录"
-      text="请创建第一个任务以开始训练或推理"
-    >
+    <v-empty-state v-else :image-height="200" headline="暂无任务" title="没有任务记录" text="请创建第一个任务以开始训练或推理">
       <template v-slot:media>
         <v-icon color="primary" size="100">mdi-clipboard-list-outline</v-icon>
       </template>
-      <v-btn
-        @click="openCreateTaskDialog"
-        color="primary"
-        variant="elevated"
-      >
+      <v-btn @click="openCreateTaskDialog" color="primary" variant="elevated">
         创建第一个任务
       </v-btn>
     </v-empty-state>
 
     <!-- 创建任务对话框 -->
-    <v-dialog v-model="taskDialog" max-width="600px" persistent>
+    <v-dialog v-model="taskDialog" max-width="700px" persistent scrollable>
       <v-card>
         <v-card-title class="d-flex align-center">
           <span>创建新任务</span>
@@ -126,78 +83,113 @@
           </v-btn>
         </v-card-title>
 
+        <v-divider />
+
         <v-card-text class="pb-0">
           <v-form ref="taskForm" v-model="formValid" @submit.prevent="saveTask">
+            <!-- 基础信息区 -->
+            <v-row class="mb-4">
+              <v-col cols="12">
+                <div class="section-title">基础信息</div>
+              </v-col>
+              <v-col cols="12">
+                <v-text-field v-model="taskFormData.name" label="任务名称" :rules="nameRules" variant="outlined"
+                  density="comfortable" prepend-icon="mdi-text" required />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="taskFormData.type" label="任务类型" :items="taskTypes" item-title="label"
+                  item-value="value" :rules="typeRules" variant="outlined" density="comfortable"
+                  prepend-icon="mdi-folder-network" required />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="taskFormData.gpuIds" label="GPU配置" :items="availableGpus" item-title="label"
+                  item-value="id" :rules="gpuRules" multiple chips variant="outlined" density="comfortable"
+                  prepend-icon="mdi-gpu" />
+              </v-col>
+            </v-row>
+
+            <v-divider class="my-4" />
+
+            <!-- 模型和数据区 -->
+            <v-row class="mb-4">
+              <v-col cols="12">
+                <div class="section-title">模型与数据</div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="taskFormData.modelId" label="选择模型" :items="models" item-title="name" item-value="id"
+                  :rules="modelRules" variant="outlined" density="comfortable" prepend-icon="mdi-brain" required />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="taskFormData.datasetId" label="选择数据集" :items="datasets" item-title="name"
+                  item-value="id" :rules="isInferenceTask ? [] : datasetRules" variant="outlined" density="comfortable"
+                  prepend-icon="mdi-database" :required="!isInferenceTask" />
+              </v-col>
+            </v-row>
+
+            <!-- 训练参数区 -->
+            <v-row v-if="isTrainingTask" class="mb-4">
+              <v-col cols="12">
+                <div class="section-title">训练参数</div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="trainingParams.finetuning_type" label="微调类型" :items="finetuningTypes"
+                  variant="outlined" density="comfortable" prepend-icon="mdi-tune" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model.number="trainingParams.num_train_epochs" label="训练轮数" type="number"
+                  :rules="epochRules" variant="outlined" density="comfortable" prepend-icon="mdi-counter" min="1"
+                  max="10000" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model.number="trainingParams.learning_rate" label="学习率" type="number"
+                  :rules="learningRateRules" variant="outlined" density="comfortable" prepend-icon="mdi-trending-up"
+                  step="0.00001" min="0.00001" max="0.1" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model.number="trainingParams.max_steps" label="最大步数" type="number" :rules="stepsRules"
+                  variant="outlined" density="comfortable" prepend-icon="mdi-step-forward" min="1" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model.number="trainingParams.per_device_train_batch_size" label="批次大小" type="number"
+                  :rules="batchSizeRules" variant="outlined" density="comfortable" prepend-icon="mdi-shape" min="1"
+                  max="512" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model.number="trainingParams.gradient_accumulation_steps" label="梯度累积步数" type="number"
+                  :rules="gradientRules" variant="outlined" density="comfortable" prepend-icon="mdi-layers-plus" min="1"
+                  max="1024" />
+              </v-col>
+            </v-row>
+
+            <!-- 高级配置 -->
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="taskFormData.name"
-                  label="任务名称"
-                  :rules="nameRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="taskFormData.type"
-                  label="任务类型"
-                  :items="taskTypes"
-                  item-title="label"
-                  item-value="value"
-                  :rules="typeRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="taskFormData.modelId"
-                  label="选择模型"
-                  :items="models"
-                  item-title="name"
-                  item-value="id"
-                  :rules="modelRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
-              </v-col>
-              <v-col cols="12">
-                <v-select
-                  v-model="taskFormData.datasetId"
-                  label="选择数据集"
-                  :items="datasets"
-                  item-title="name"
-                  item-value="id"
-                  :rules="datasetRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
-              </v-col>
-              <v-col cols="12">
-                <v-textarea
-                  v-model="taskConfigJson"
-                  label="任务配置 (JSON)"
-                  hint="输入 JSON 格式的配置参数"
-                  persistent-hint
-                  variant="outlined"
-                  density="comfortable"
-                  rows="4"
-                />
+                <v-expansion-panels>
+                  <v-expansion-panel>
+                    <template v-slot:title>
+                      <div class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-cog</v-icon>
+                        <span>高级配置（可选）</span>
+                      </div>
+                    </template>
+                    <v-expansion-panel-text>
+                      <v-textarea v-model="advancedConfigJson" label="自定义配置 (JSON)" hint="输入额外的 JSON 格式的配置参数"
+                        persistent-hint variant="outlined" density="comfortable" rows="4" class="mt-4" />
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
               </v-col>
             </v-row>
           </v-form>
         </v-card-text>
 
+        <v-divider />
+
         <v-card-actions>
           <v-spacer />
           <v-btn @click="closeTaskDialog" variant="text">取消</v-btn>
           <v-btn @click="saveTask" color="primary" variant="elevated" :loading="saving">
-            创建
+            创建任务
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -253,19 +245,11 @@
 
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            v-if="selectedTask.status === 'RUNNING'"
-            @click="stopTask(selectedTask)"
-            color="warning"
-            variant="elevated"
-          >
+          <v-btn v-if="selectedTask.status === 'RUNNING'" @click="stopTask(selectedTask)" color="warning"
+            variant="elevated">
             停止任务
           </v-btn>
-          <v-btn
-            @click="detailsDialog = false"
-            color="primary"
-            variant="text"
-          >
+          <v-btn @click="detailsDialog = false" color="primary" variant="text">
             关闭
           </v-btn>
         </v-card-actions>
@@ -276,13 +260,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { taskApi, modelApi, datasetApi } from '@/api'
-import type { Task, Model, Dataset } from '@/api/types'
+import { taskApi, modelApi, datasetApi, resourceApi } from '@/api'
+import type { Task, Model, Dataset, Resource } from '@/api/types'
 
 // 响应式数据
 const tasks = ref<Task[]>([])
 const models = ref<Model[]>([])
 const datasets = ref<Dataset[]>([])
+const resources = ref<Resource[]>([])
 const taskDialog = ref(false)
 const detailsDialog = ref(false)
 const taskForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
@@ -290,7 +275,26 @@ const formValid = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const selectedTask = ref<Task | null>(null)
-const taskConfigJson = ref('{}')
+const advancedConfigJson = ref('{}')
+
+// 表单数据
+const taskFormData = ref({
+  name: '',
+  type: 'TRAINING',
+  modelId: '',
+  datasetId: '',
+  gpuIds: [] as string[],
+})
+
+// 训练参数
+const trainingParams = ref({
+  finetuning_type: 'full',
+  num_train_epochs: 3,
+  learning_rate: 0.0002,
+  max_steps: 50,
+  per_device_train_batch_size: 1,
+  gradient_accumulation_steps: 1,
+})
 
 const tableHeaders = [
   { title: '任务名称', value: 'name', sortable: true },
@@ -305,11 +309,21 @@ const taskTypes = [
   { label: '推理', value: 'INFERENCE' },
 ]
 
-const taskFormData = ref({
-  name: '',
-  type: 'TRAINING',
-  modelId: '',
-  datasetId: '',
+const finetuningTypes = [
+  { title: 'Full', value: 'full' },
+  { title: 'LoRA', value: 'lora' },
+  { title: 'QLoRA', value: 'qlora' },
+]
+
+// 计算属性
+const isTrainingTask = computed(() => taskFormData.value.type === 'TRAINING')
+const isInferenceTask = computed(() => taskFormData.value.type === 'INFERENCE')
+
+const availableGpus = computed(() => {
+  return resources.value.map((gpu) => ({
+    id: String(gpu.id),
+    label: `GPU ${gpu.id} (${gpu.memoryUsed}/${gpu.memoryTotal} MB)`,
+  }))
 })
 
 // 验证规则
@@ -321,6 +335,38 @@ const nameRules = [
 const typeRules = [(v: string) => !!v || '任务类型为必填项']
 const modelRules = [(v: string) => !!v || '模型为必填项']
 const datasetRules = [(v: string) => !!v || '数据集为必填项']
+const gpuRules = [
+  (v: string[]) => !isTrainingTask.value || (v && v.length > 0) || '训练任务需要选择至少一个GPU',
+]
+
+const epochRules = [
+  (v: number) => v != null || '训练轮数为必填项',
+  (v: number) => v >= 1 || '训练轮数至少为1',
+  (v: number) => v <= 10000 || '训练轮数不超过10000',
+]
+
+const learningRateRules = [
+  (v: number) => v != null || '学习率为必填项',
+  (v: number) => v > 0 || '学习率必须大于0',
+  (v: number) => v <= 0.1 || '学习率通常不超过0.1',
+]
+
+const stepsRules = [
+  (v: number) => v != null || '最大步数为必填项',
+  (v: number) => v >= 1 || '最大步数至少为1',
+]
+
+const batchSizeRules = [
+  (v: number) => v != null || '批次大小为必填项',
+  (v: number) => v >= 1 || '批次大小至少为1',
+  (v: number) => v <= 512 || '批次大小通常不超过512',
+]
+
+const gradientRules = [
+  (v: number) => v != null || '梯度累积步数为必填项',
+  (v: number) => v >= 1 || '梯度累积步数至少为1',
+  (v: number) => v <= 1024 || '梯度累积步数通常不超过1024',
+]
 
 // 方法
 const getTaskIcon = (type: string) => {
@@ -365,13 +411,55 @@ const openCreateTaskDialog = () => {
     type: 'TRAINING',
     modelId: '',
     datasetId: '',
+    gpuIds: [],
   }
-  taskConfigJson.value = '{}'
+  trainingParams.value = {
+    finetuning_type: 'full',
+    num_train_epochs: 3,
+    learning_rate: 0.0002,
+    max_steps: 50,
+    per_device_train_batch_size: 1,
+    gradient_accumulation_steps: 1,
+  }
+  advancedConfigJson.value = '{}'
   taskDialog.value = true
 }
 
 const closeTaskDialog = () => {
   taskDialog.value = false
+}
+
+const buildConfig = () => {
+  const config: Record<string, unknown> = {
+    gpu_count: taskFormData.value.gpuIds.length,
+    gpu_ids: taskFormData.value.gpuIds.map((id) => parseInt(id)),
+  }
+
+  // 只有训练任务才需要training_config
+  if (isTrainingTask.value) {
+    const selectedModel = models.value.find((m) => m.id === taskFormData.value.modelId)
+    const selectedDataset = datasets.value.find((d) => d.id === taskFormData.value.datasetId)
+
+    const trainingConfig: Record<string, unknown> = {
+      model_name_or_path: selectedModel?.name || taskFormData.value.modelId,
+      dataset: selectedDataset?.name || taskFormData.value.datasetId,
+      ...trainingParams.value,
+    }
+
+    // 合并高级配置
+    try {
+      const advancedConfig = JSON.parse(advancedConfigJson.value) as Record<string, unknown>
+      if (Object.keys(advancedConfig).length > 0) {
+        Object.assign(trainingConfig, advancedConfig)
+      }
+    } catch {
+      // 忽略无效的JSON
+    }
+
+    config.training_config = trainingConfig
+  }
+
+  return config
 }
 
 const saveTask = async () => {
@@ -380,18 +468,14 @@ const saveTask = async () => {
 
   saving.value = true
   try {
-    let config = {}
-    try {
-      config = JSON.parse(taskConfigJson.value)
-    } catch {
-      config = {}
-    }
+    const config = buildConfig()
 
     await taskApi.createTask({
       name: taskFormData.value.name,
       type: taskFormData.value.type as 'TRAINING' | 'INFERENCE',
       modelId: taskFormData.value.modelId,
       datasetId: taskFormData.value.datasetId,
+      gpuIds: taskFormData.value.gpuIds.map((id) => parseInt(id)),
       config,
     })
 
@@ -420,18 +504,6 @@ const stopTask = async (task: Task) => {
     }
   } catch (error) {
     console.error('停止任务失败:', error)
-  }
-}
-
-const deleteTask = async (task: Task) => {
-  if (!confirm(`确定要删除任务 "${task.name}" 吗?`)) return
-
-  try {
-    // 注意: API 中可能没有删除任务的端点，这里仅作示例
-    console.log('删除任务:', task.id)
-    loadTasks()
-  } catch (error) {
-    console.error('删除任务失败:', error)
   }
 }
 
@@ -465,11 +537,21 @@ const loadDatasets = async () => {
   }
 }
 
+const loadResources = async () => {
+  try {
+    const response = await resourceApi.getResources()
+    resources.value = response.data
+  } catch (error) {
+    console.error('加载GPU资源失败:', error)
+  }
+}
+
 // 生命周期钩子
 onMounted(() => {
   loadTasks()
   loadModels()
   loadDatasets()
+  loadResources()
 })
 </script>
 
@@ -495,6 +577,24 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   margin: 8px 0 0 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background-color: #1976d2;
+  border-radius: 2px;
+  margin-right: 8px;
 }
 
 .task-table-card {

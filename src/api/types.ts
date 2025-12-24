@@ -125,7 +125,8 @@ export interface CreateTaskRequest {
   name: string
   type: 'TRAINING' | 'INFERENCE'
   modelId: string
-  datasetId: string
+  datasetId?: string
+  gpuIds?: number[]
   config: Record<string, unknown>
 }
 
