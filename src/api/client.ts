@@ -6,7 +6,7 @@ import type { RefreshTokenResponse, ApiErrorResponse } from './types'
 
 // 创建axios实例
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -41,16 +41,16 @@ apiClient.interceptors.response.use(
 
     // 如果是401错误且不是登录或刷新token的请求
     if (error.response?.status === 401 && originalRequest) {
-      const isLoginRequest = originalRequest.url?.includes('/auth/login')
-      const isRefreshRequest = originalRequest.url?.includes('/auth/refresh')
+      const isLoginRequest = originalRequest.url?.includes('/api/auth/login')
+      const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh')
 
       if (!isLoginRequest && !isRefreshRequest && authStore.refreshToken) {
         try {
           // 尝试刷新token
           const refreshClient = axios.create({
-            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
+            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
           })
-          const response = await refreshClient.post<RefreshTokenResponse>('/auth/refresh', {
+          const response = await refreshClient.post<RefreshTokenResponse>('/api/auth/refresh', {
             refreshToken: authStore.refreshToken,
           })
 
