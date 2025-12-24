@@ -167,7 +167,7 @@ let conversationIdCounter = 0
 // 计算属性
 const selectedModelName = computed(() => {
   if (selectedTaskId.value != null) {
-    const model = models.value.find((m) => m.id === tasks.value.find((t) => t.id === selectedTaskId.value.id)?.modelId)
+    const model = models.value.find((m) => m.id === tasks.value.find((t) => t.id === selectedTaskId.value)?.modelId)
     return model?.name || ''
   }
   return ''
