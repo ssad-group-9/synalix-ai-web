@@ -139,6 +139,27 @@ import { ref, computed, onMounted } from 'vue'
 import { datasetApi } from '@/api'
 import type { Dataset } from '@/api/types'
 
+type RawRecord = {
+  instruction: string
+  input: string
+  output: string
+}
+
+type WrappedDataset = {
+  dataset_info: Record<
+    string,
+    {
+      file_name: string
+      columns: {
+        prompt: 'instruction'
+        query: 'input'
+        response: 'output'
+      }
+    }
+  >
+  data: RawRecord[]
+}
+
 // 响应式数据
 const datasets = ref<Dataset[]>([])
 const datasetDialog = ref(false)
@@ -151,6 +172,45 @@ const loadingPreview = ref(false)
 const selectedFile = ref<File | null>(null)
 const selectedDataset = ref<Dataset | null>(null)
 const previewContent = ref('')
+
+const sanitizeDatasetKey = (name: string) => {
+  const base = (name || 'dataset')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_-]/g, '')
+  return base.length ? base : 'dataset'
+}
+
+const readJsonFile = async (file: File): Promise<unknown> => {
+  const text = await file.text()
+  return JSON.parse(text)
+}
+
+const isRawRecordArray = (v: unknown): v is RawRecord[] => {
+  if (!Array.isArray(v)) return false
+  return v.every((item) => {
+    if (typeof item !== 'object' || item === null) return false
+    const r = item as Record<string, unknown>
+    return typeof r.instruction === 'string' && typeof r.input === 'string' && typeof r.output === 'string'
+  })
+}
+
+const wrapDatasetJson = (datasetKey: string, data: RawRecord[]): WrappedDataset => {
+  return {
+    dataset_info: {
+      [datasetKey]: {
+        file_name: `${datasetKey}/data.json`,
+        columns: {
+          prompt: 'instruction',
+          query: 'input',
+          response: 'output',
+        },
+      },
+    },
+    data,
+  }
+}
 
 const tableHeaders = [
   { title: '名称', value: 'name', sortable: true },
@@ -221,25 +281,45 @@ const saveDataset = async () => {
       description: datasetFormData.value.description,
     })
 
-    console.log(selectedFile.value)
-
     // 如果选择了文件，则上传
     if (selectedFile.value) {
       const file = selectedFile.value
-      // 获取上传URL
-      console.log(file)
-      const urlResponse = await datasetApi.getUploadUrl(dataset.data.id)
-      console.log(urlResponse)
-      // 使用上传URL上传文件
-      await fetch(urlResponse.data.url, {
-        method: urlResponse.data.method,
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      })
 
-      // await datasetApi.updateDataset(dataset.data.id)
+      // 获取上传URL
+      const urlResponse = await datasetApi.getUploadUrl(dataset.data.id)
+
+      // 如果是 json：前端转换包装后再上传
+      if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
+        const raw = await readJsonFile(file)
+        if (!isRawRecordArray(raw)) {
+          throw new Error('JSON 文件格式不正确：应为包含 instruction/input/output 的数组')
+        }
+
+        const datasetKey = sanitizeDatasetKey(datasetFormData.value.name || `dataset-${dataset.data.id}`)
+        const wrapped = wrapDatasetJson(datasetKey, raw)
+
+        const wrappedBlob = new Blob([JSON.stringify(wrapped, null, 2)], { type: 'application/json' })
+        const uploadFile = new File([wrappedBlob], 'data.json', { type: 'application/json' })
+
+        await fetch(urlResponse.data.url, {
+          method: urlResponse.data.method,
+          body: uploadFile,
+          headers: {
+            'Content-Type': uploadFile.type,
+          },
+        })
+      } else {
+        // 非 json：保持原逻辑直接上传
+        await fetch(urlResponse.data.url, {
+          method: urlResponse.data.method,
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        })
+      }
+
+      await datasetApi.updateDataset(dataset.data.id)
     }
 
     closeDatasetDialog()

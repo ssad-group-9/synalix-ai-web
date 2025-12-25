@@ -85,6 +85,12 @@ export interface CreateModelRequest {
   version: string
 }
 
+export interface CheckpointDownloadUrlResponse {
+  downloadUrl: string
+  expiresAt?: string
+}
+
+
 // ========== Dataset Types ==========
 export interface Dataset {
   id: string

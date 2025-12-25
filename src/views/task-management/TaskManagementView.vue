@@ -177,7 +177,7 @@
                     prepend-icon="mdi-brain" required />
                 </v-col>
                 <v-col cols="12" md="6">
-                  <v-select v-model="taskFormData.adaptorCheckpointId" label="选择Lora检查点" :items="adaptorCheckpoints"
+                  <v-select v-model="taskFormData.adapterCheckpointId" label="选择Lora检查点" :items="adapterCheckpoints"
                     item-title="name" item-value="id" :rules="isInferenceTask ? [] : datasetRules" variant="outlined"
                     density="comfortable" prepend-icon="mdi-database" :required="!isInferenceTask" />
                 </v-col>
@@ -296,7 +296,7 @@ const models = ref<Model[]>([])
 const datasets = ref<Dataset[]>([])
 const checkpoints = ref<Checkpoints[]>([])
 const modelChceckpoints = ref<Checkpoints[]>([])
-const adaptorCheckpoints = ref<Checkpoints[]>([])
+const adapterCheckpoints = ref<Checkpoints[]>([])
 const resources = ref<Resource[]>([])
 const taskDialog = ref(false)
 const detailsDialog = ref(false)
@@ -317,7 +317,7 @@ const taskFormData = ref({
   datasetId: '',
   checkpointId: '',
   modelCheckpointId: '',
-  adaptorCheckpointId: '',
+  adapterCheckpointId: '',
   gpuIds: [] as string[],
 })
 
@@ -448,7 +448,7 @@ const openCreateTaskDialog = () => {
     datasetId: '',
     checkpointId: '',
     modelCheckpointId: '',
-    adaptorCheckpointId: '',
+    adapterCheckpointId: '',
     gpuIds: [],
   }
   trainingParams.value = {
@@ -499,11 +499,11 @@ const buildConfig = () => {
   else {
     // 推理任务配置
     const selectedCheckpoint = checkpoints.value.find((c) => c.id === taskFormData.value.modelCheckpointId)
-    const selectedAdaptor = checkpoints.value.find((c) => c.id === taskFormData.value.adaptorCheckpointId)
+    const selectedadapter = checkpoints.value.find((c) => c.id === taskFormData.value.adapterCheckpointId)
 
     const inferenceConfig: Record<string, unknown> = {
       model_name_or_path: selectedCheckpoint?.path,
-      adaptor_name_or_path: selectedAdaptor?.path,
+      adapter_name_or_path: selectedadapter?.path,
     }
 
     // 合并高级配置
@@ -607,7 +607,7 @@ function splitCheckpointsByType(list: Checkpoints[]) {
     else if (cp.type === 'ADAPTER') adapter.push(cp)
   }
   modelChceckpoints.value = model
-  adaptorCheckpoints.value = adapter
+  adapterCheckpoints.value = adapter
 }
 
 const loadCheckpoints = async (modelId: string) => {
@@ -619,7 +619,7 @@ const loadCheckpoints = async (modelId: string) => {
   } catch (error) {
     checkpoints.value = []
     modelChceckpoints.value = []
-    adaptorCheckpoints.value = []
+    adapterCheckpoints.value = []
     console.error('加载检查点失败:', error)
   }
 }

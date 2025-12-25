@@ -23,6 +23,7 @@ import type {
   Checkpoints,
   ChatCompletionsRequest,
   ChatCompletionsResponse,
+  CheckpointDownloadUrlResponse,
 } from './types'
 
 export const authApi = {
@@ -84,6 +85,8 @@ export const modelApi = {
 
 export const checkpointsApi = {
   getCheckpoints: (id: string) => apiClient.get<Checkpoints[]>(`/api/checkpoints/${id}`),
+  getDownloadUrl: (checkpointId: string) =>
+    apiClient.get<CheckpointDownloadUrlResponse>(`/api/checkpoints/${checkpointId}/download-url`),
 }
 
 // ========== Dataset API ==========

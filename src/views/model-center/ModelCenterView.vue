@@ -6,13 +6,7 @@
         <h1 class="page-title">模型中心</h1>
         <p class="page-subtitle">查看和管理系统中的所有模型</p>
       </div>
-      <v-btn
-        v-if="isAdmin"
-        @click="openCreateModelDialog"
-        color="primary"
-        prepend-icon="mdi-plus"
-        variant="elevated"
-      >
+      <v-btn v-if="isAdmin" @click="openCreateModelDialog" color="primary" prepend-icon="mdi-plus" variant="elevated">
         注册新模型
       </v-btn>
     </div>
@@ -43,47 +37,21 @@
 
           <v-card-actions>
             <v-spacer />
-            <v-btn
-              @click="selectModel(model)"
-              color="primary"
-              variant="text"
-              size="small"
-            >
-              选择使用
+            <v-btn @click="openModelDetail(model)" color="primary" variant="text" size="small">
+              查看详情
             </v-btn>
-            <v-btn
-              v-if="isAdmin"
-              @click="deleteModel(model)"
-              icon
-              variant="text"
-              size="small"
-              color="error"
-            >
-              <v-icon>mdi-delete</v-icon>
-              <v-tooltip activator="parent" location="top">删除</v-tooltip>
+            <v-btn @click="selectModel(model)" color="primary" variant="text" size="small">
+              选择
             </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
-
-    <!-- 空状态 -->
-    <v-empty-state
-      v-else
-      :image-height="200"
-      headline="暂无模型"
-      title="没有可用的模型"
-      text="请先注册模型以开始使用"
-    >
+    <v-empty-state v-else :image-height="200" headline="暂无模型" title="没有可用的模型" text="请先注册模型以开始使用">
       <template v-slot:media>
         <v-icon color="primary" size="100">mdi-cube-outline</v-icon>
       </template>
-      <v-btn
-        v-if="isAdmin"
-        @click="openCreateModelDialog"
-        color="primary"
-        variant="elevated"
-      >
+      <v-btn v-if="isAdmin" @click="openCreateModelDialog" color="primary" variant="elevated">
         创建第一个模型
       </v-btn>
     </v-empty-state>
@@ -103,47 +71,20 @@
           <v-form ref="modelForm" v-model="formValid" @submit.prevent="saveModel">
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  v-model="modelFormData.name"
-                  label="模型名称"
-                  :rules="nameRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-text-field v-model="modelFormData.name" label="模型名称" :rules="nameRules" variant="outlined"
+                  density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-select
-                  v-model="modelFormData.type"
-                  label="模型类型"
-                  :items="modelTypes"
-                  item-title="label"
-                  item-value="value"
-                  :rules="typeRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-select v-model="modelFormData.type" label="模型类型" :items="modelTypes" item-title="label"
+                  item-value="value" :rules="typeRules" variant="outlined" density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-text-field
-                  v-model="modelFormData.version"
-                  label="版本"
-                  :rules="versionRules"
-                  variant="outlined"
-                  density="comfortable"
-                  required
-                />
+                <v-text-field v-model="modelFormData.version" label="版本" :rules="versionRules" variant="outlined"
+                  density="comfortable" required />
               </v-col>
               <v-col cols="12">
-                <v-textarea
-                  v-model="modelFormData.description"
-                  label="描述"
-                  :rules="descriptionRules"
-                  variant="outlined"
-                  density="comfortable"
-                  rows="3"
-                />
+                <v-textarea v-model="modelFormData.description" label="描述" :rules="descriptionRules" variant="outlined"
+                  density="comfortable" rows="3" />
               </v-col>
             </v-row>
           </v-form>
@@ -158,16 +99,139 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 详情对话框 -->
+    <v-dialog v-model="modelDetailDialog" max-width="900">
+      <v-card v-if="selectedModelForDetail">
+        <v-card-title class="d-flex align-center">
+          <div class="flex-grow-1">
+            <div class="text-h6">{{ selectedModelForDetail.name }}</div>
+            <div class="text-caption text-grey-600">
+              版本 {{ selectedModelForDetail.version }} · {{ selectedModelForDetail.type }}
+            </div>
+          </div>
+          <v-btn icon variant="text" @click="modelDetailDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-divider />
+
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="12">
+              <v-card variant="tonal" class="pa-4">
+                <div class="text-subtitle-2 mb-2">基本信息</div>
+
+                <div class="text-body-2 mb-2">
+                  <strong>ID:</strong> {{ selectedModelForDetail.id }}
+                </div>
+                <div class="text-body-2 mb-2">
+                  <strong>描述:</strong> {{ selectedModelForDetail.description || '-' }}
+                </div>
+                <div class="text-body-2 mb-2">
+                  <strong>创建时间:</strong> {{ formatDate(selectedModelForDetail.createdAt) }}
+                </div>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" md="12">
+              <v-card variant="tonal" class="pa-4">
+                <div class="text-subtitle-2 mb-2">ModelCheckpoints</div>
+
+                <template v-if="modelChceckpoints.length">
+                  <v-list density="compact">
+                    <v-list-item v-for="(ckpt, idx) in modelChceckpoints" :key="ckpt.id ?? idx">
+                      <template #prepend>
+                        <v-icon>mdi-database</v-icon>
+                      </template>
+
+                      <v-list-item-title class="d-flex align-center">
+                        <span class="flex-grow-1">
+                          {{ ckpt.name ?? `checkpoint-${idx + 1}` }}
+                        </span>
+
+                        <v-btn size="small" variant="text" color="primary"
+                          :loading="downloadingCheckpointId === ckpt.id" :disabled="!ckpt.id"
+                          @click="onDownloadCheckpoint(ckpt.id)">
+                          下载
+                        </v-btn>
+                      </v-list-item-title>
+
+                      <v-list-item-subtitle>
+                        <span v-if="ckpt.createdAt">创建: {{ formatDate(ckpt.createdAt) }}</span>
+                        <span v-if="(ckpt as any).step != null"> · step: {{ (ckpt as any).step }}</span>
+                        <span v-if="(ckpt as any).epoch != null"> · epoch: {{ (ckpt as any).epoch }}</span>
+                        <span v-if="(ckpt as any).size != null"> · size: {{ (ckpt as any).size }}</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </template>
+
+                <div class="text-subtitle-2 mb-2">AdapterCheckpoints</div>
+
+                <template v-if="adapterCheckpoints.length">
+                  <v-list density="compact">
+                    <v-list-item v-for="(ckpt, idx) in adapterCheckpoints" :key="ckpt.id ?? idx">
+                      <template #prepend>
+                        <v-icon>mdi-database</v-icon>
+                      </template>
+
+                      <v-list-item-title class="d-flex align-center">
+                        <span class="flex-grow-1">
+                          {{ ckpt.name ?? `checkpoint-${idx + 1}` }}
+                        </span>
+
+                        <v-btn size="small" variant="text" color="primary"
+                          :loading="downloadingCheckpointId === ckpt.id" :disabled="!ckpt.id"
+                          @click="onDownloadCheckpoint(ckpt.id)">
+                          下载
+                        </v-btn>
+                      </v-list-item-title>
+
+                      <v-list-item-subtitle>
+                        <span v-if="ckpt.createdAt">创建: {{ formatDate(ckpt.createdAt) }}</span>
+                        <span v-if="(ckpt as any).step != null"> · step: {{ (ckpt as any).step }}</span>
+                        <span v-if="(ckpt as any).epoch != null"> · epoch: {{ (ckpt as any).epoch }}</span>
+                        <span v-if="(ckpt as any).size != null"> · size: {{ (ckpt as any).size }}</span>
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </template>
+
+                <template v-else>
+                  <div class="text-body-2 text-grey-600">暂无 checkpoints 数据。</div>
+                </template>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="modelDetailDialog = false">关闭</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { modelApi } from '@/api'
-import type { Model } from '@/api/types'
+import { modelApi, checkpointsApi } from '@/api'
+import type { Model, Checkpoints } from '@/api/types'
+import type { AxiosError } from 'axios'
 
+const modelDetailDialog = ref(false)
+const selectedModelForDetail = ref<any | null>(null)
 const authStore = useAuthStore()
+const modelChceckpoints = ref<Checkpoints[]>([])
+const adapterCheckpoints = ref<Checkpoints[]>([])
+const downloadingCheckpointId = ref<string | null>(null)
 
 // 响应式数据
 const models = ref<Model[]>([])
@@ -176,6 +240,13 @@ const modelForm = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(nu
 const formValid = ref(false)
 const loading = ref(false)
 const saving = ref(false)
+const checkpoints = ref<any[]>([])
+
+const snackbar = ref<{ show: boolean; text: string; color: 'success' | 'error' | 'info' }>({
+  show: false,
+  text: '',
+  color: 'info',
+})
 
 const modelTypes = [
   { label: 'LLM (大语言模型)', value: 'LLM' },
@@ -189,6 +260,65 @@ const modelFormData = ref({
   version: '1.0',
   description: '',
 })
+const showError = (text: string) => {
+  snackbar.value = { show: true, text, color: 'error' }
+}
+
+const onDownloadCheckpoint = async (checkpointId: string) => {
+  downloadingCheckpointId.value = checkpointId
+  try {
+    const res = await checkpointsApi.getDownloadUrl(checkpointId)
+    const downloadUrl = res.data.downloadUrl
+    if (!downloadUrl) {
+      showError('获取下载链接失败：downloadUrl 为空')
+      return
+    }
+
+    // 触发下载（新标签打开，交给浏览器处理）
+    window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+  } catch (e) {
+    const err = e as AxiosError
+    showError(`获取下载链接失败：${err.message}`)
+  } finally {
+    downloadingCheckpointId.value = null
+  }
+}
+
+const loadCheckpoints = async (modelId: string) => {
+  try {
+    const response = await checkpointsApi.getCheckpoints(modelId)
+    checkpoints.value = response.data
+    console.log('加载检查点:', checkpoints.value)
+    splitCheckpointsByType(checkpoints.value)
+  } catch (error) {
+    checkpoints.value = []
+    modelChceckpoints.value = []
+    adapterCheckpoints.value = []
+    console.error('加载检查点失败:', error)
+  }
+}
+
+function splitCheckpointsByType(list: Checkpoints[]) {
+  const model: Checkpoints[] = []
+  const adapter: Checkpoints[] = []
+  for (const cp of list) {
+    if (cp.type === 'MODEL') model.push(cp)
+    else if (cp.type === 'ADAPTER') adapter.push(cp)
+  }
+  modelChceckpoints.value = model
+  adapterCheckpoints.value = adapter
+}
+
+const openModelDetail = (model: any) => {
+  selectedModelForDetail.value = model
+  modelDetailDialog.value = true
+
+  loadCheckpoints(model.id)
+
+  // 若 checkpoints 需要额外请求：
+  // 1) 在这里调用 modelApi.getModelDetail(model.id)
+  // 2) 把返回值合并进 selectedModelForDetail.value
+}
 
 // 验证规则
 const nameRules = [
