@@ -292,13 +292,11 @@ const loadCheckpoints = async (modelId: string) => {
   try {
     const response = await checkpointsApi.getCheckpoints(modelId)
     checkpoints.value = response.data
-    console.log('加载检查点:', checkpoints.value)
     splitCheckpointsByType(checkpoints.value)
   } catch (error) {
     checkpoints.value = []
     modelChceckpoints.value = []
     adapterCheckpoints.value = []
-    console.error('加载检查点失败:', error)
   }
 }
 

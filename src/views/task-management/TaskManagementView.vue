@@ -530,8 +530,6 @@ const saveTask = async () => {
   try {
     const config = buildConfig()
 
-    console.log(config)
-
     await taskApi.createTask({
       name: taskFormData.value.name,
       type: taskFormData.value.type as 'TRAINING' | 'INFERENCE',
@@ -614,7 +612,6 @@ const loadCheckpoints = async (modelId: string) => {
   try {
     const response = await checkpointsApi.getCheckpoints(modelId)
     checkpoints.value = response.data
-    console.log('加载检查点:', checkpoints.value)
     splitCheckpointsByType(checkpoints.value)
   } catch (error) {
     checkpoints.value = []
@@ -644,7 +641,6 @@ watch([detailsDialog, selectedTask], async ([open, task]) => {
 })
 
 watch(() => taskFormData.value.modelId, async (modelId) => {
-  console.log(modelChceckpoints)
   if (taskFormData.value.type === 'INFERENCE' && modelId) {
     await loadCheckpoints(modelId)
   }

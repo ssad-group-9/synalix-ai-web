@@ -14,7 +14,7 @@ import type {
   CreateModelRequest,
   Dataset,
   CreateDatasetRequest,
-  UploadUrlResponse,
+  PresignedUrlResponse,
   Task,
   CreateTaskRequest,
   TaskMetrics,
@@ -24,6 +24,8 @@ import type {
   ChatCompletionsRequest,
   ChatCompletionsResponse,
   CheckpointDownloadUrlResponse,
+  CreateFileRequest,
+  FileResponse,
 } from './types'
 
 export const authApi = {
@@ -104,10 +106,10 @@ export const datasetApi = {
   deleteDataset: (id: string) => apiClient.delete<void>(`/api/datasets/${id}`),
 
   // 获取上传URL
-  getUploadUrl: (id: string) => apiClient.get<UploadUrlResponse>(`/api/datasets/${id}/upload-url`),
+  getUploadUrl: (id: string) => apiClient.get<PresignedUrlResponse>(`/api/datasets/${id}/upload-url`),
 
   // 获取下载URL
-  getDownloadUrl: (id: string) => apiClient.get<UploadUrlResponse>(`/api/datasets/${id}/download-url`),
+  getDownloadUrl: (id: string) => apiClient.get<PresignedUrlResponse>(`/api/datasets/${id}/download-url`),
 
   updateDataset: (id: string) => apiClient.post<Boolean>(`/api/datasets/${id}/update-dataset`),
 }
@@ -144,11 +146,31 @@ export const chatApi = {
    * @param taskId 后端任务 id（路径中的 {id}）
    * @param payload 已在前端组装好的 completions 请求体
    */
-  sendCompletions: (taskId: string, payload: ChatCompletionsRequest) =>
-    apiClient.post<ChatCompletionsResponse>(
+  async sendCompletions(taskId: string, payload: ChatCompletionsRequest) {
+    const { data } = await apiClient.post<ChatCompletionsResponse>(
       `/api/chat/${taskId}/completions`,
       payload,
-    ),
+    )
+    return data
+  }
+}
+
+
+export const filesApi = {
+  async createFile(payload: CreateFileRequest) {
+    const { data } = await apiClient.post<FileResponse>('/api/files', payload)
+    return data
+  },
+
+  async getUploadUrl(id: string) {
+    const { data } = await apiClient.get<PresignedUrlResponse>(`/api/files/${id}/upload-url`)
+    return data
+  },
+
+  async getDownloadUrl(id: string) {
+    const { data } = await apiClient.get<PresignedUrlResponse>(`/api/files/${id}/download-url`)
+    return data
+  },
 }
 
 // ========== Resource API ==========

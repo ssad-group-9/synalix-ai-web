@@ -34,7 +34,6 @@ export const useAuthStore = defineStore(
     }
 
     const isAuthenticated = () => {
-      console.log('accessToken', accessToken.value)
       return !!accessToken.value
     }
 

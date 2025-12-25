@@ -116,7 +116,7 @@ export interface CreateDatasetRequest {
   description: string
 }
 
-export interface UploadUrlResponse {
+export interface PresignedUrlResponse {
   url: string
   method: string
   expiresAt: string
@@ -158,6 +158,24 @@ export interface TaskChart {
   chartUrl: string
 }
 
+
+export interface CreateFileRequest {
+  originalFilename: string
+  contentType: string
+  sizeBytes?: number
+}
+
+export interface FileResponse {
+  id: string
+  objectKey: string
+  originalFilename: string
+  contentType: string
+  sizeBytes: number | null
+  status: 'CREATED' | 'UPLOADING' | 'READY' | 'FAILED'
+  createdBy: string
+  createdAt: string
+}
+
 // ========== Resource Types ==========
 export interface Resource {
   id: number
@@ -168,9 +186,15 @@ export interface Resource {
 }
 
 // ========== Chat Types ==========
+export type ChatRole = 'system' | 'user' | 'assistant'
+
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } } // url 可为 https://... 或 data:image/...;base64,...
+
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
+  role: ChatRole
+  content: string | ChatContentPart[]
   tool_calls?: unknown | null
 }
 

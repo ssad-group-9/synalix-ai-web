@@ -78,10 +78,23 @@
                   </v-avatar>
                 </div>
                 <div class="message-content">
-                  <div class="message-bubble">{{ message.content }}</div>
+                  <div class="message-bubble">
+                    <template v-if="Array.isArray(message.content)">
+                      <template v-for="(part, i) in message.content" :key="i">
+                        <div v-if="part.type === 'text'">{{ part.text }}</div>
+                        <v-img v-else-if="part.type === 'image_url'" :src="part.image_url.url" class="mt-2 chat-image"
+                          max-height="320" />
+                      </template>
+                    </template>
+                    <div v-else>
+                      {{ message.content }}
+                    </div>
+                  </div>
                   <div class="message-time">{{ formatTime(message.timestamp) }}</div>
                 </div>
               </div>
+
+
 
               <!-- 加载指示器 -->
               <div v-if="isWaitingForResponse" class="message-item message-assistant">
@@ -99,20 +112,58 @@
                 </div>
               </div>
             </div>
+            <div v-if="thumbSrc || selectedImageFile || uploadedImageUrl || localPreviewUrl"
+              class="floating-image-bubble">
+              <div class="image-bubble">
+                <div v-if="thumbSrc" class="image-bubble__thumb">
+                  <v-img :src="thumbSrc" width="200" height="200" cover class="rounded" />
+                  <v-btn icon size="x-small" variant="flat" class="image-bubble__clear" :disabled="uploading"
+                    @click="clearSelectedImage" aria-label="清除图片">
+                    <v-icon size="16">mdi-close</v-icon>
+                  </v-btn>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 输入区域 -->
           <v-divider />
+
           <div class="input-area">
-            <v-row no-gutters class="px-4 py-3" align="center">
-              <v-col cols="10">
-                <v-text-field v-model="newMessage" variant="outlined" density="comfortable" placeholder="输入您的问题..."
-                  @keyup.enter="handleSend" />
+
+            <!-- 原来的输入框 + 发送按钮 -->
+            <v-row no-gutters align="center" class="message-input-container">
+              <!-- 图片上传按钮 -->
+              <v-col class="d-flex align-center" cols="auto" style="padding-right: 8px">
+                <v-tooltip text="上传图片" location="top">
+                  <template v-slot:activator="{ props }">
+                    <v-btn v-bind="props" variant="outlined" color="grey-lighten-1" icon size="small"
+                      class="image-upload-btn" :disabled="uploading" @click="triggerFileInput">
+                      <v-icon>mdi-image-outline</v-icon>
+                    </v-btn>
+                  </template>
+                </v-tooltip>
+
+                <!-- 隐藏的文件输入 -->
+                <v-file-input ref="fileInputRef" accept="image/*" hide-details variant="plain" :clearable="false"
+                  :disabled="uploading" @update:model-value="onSelectImage" class="hidden-file-input">
+                  <!-- 隐藏默认显示的文件名 -->
+                  <template #selection></template>
+                </v-file-input>
               </v-col>
-              <v-col cols="2" class="text-right">
-                <v-btn color="primary" :disabled="!newMessage || !selectedModelId || isWaitingForResponse"
-                  @click="handleSend">
-                  发送
+
+              <!-- 输入框 -->
+              <v-col class="flex-grow-1">
+                <v-text-field v-model="newMessage" variant="outlined" density="comfortable" placeholder="输入您的问题..."
+                  hide-details single-line clearable @keyup.enter="handleSend" class="message-input"
+                  :disabled="isWaitingForResponse">
+                </v-text-field>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn color="primary" variant="flat" icon size="small"
+                  :disabled="!newMessage || !selectedModelId || isWaitingForResponse" @click="handleSend"
+                  class="send-btn">
+                  <v-icon size="20">mdi-send</v-icon>
                 </v-btn>
               </v-col>
             </v-row>
@@ -125,9 +176,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { modelApi, taskApi, chatApi } from '@/api'
-import type { Model, Task, ChatCompletionsResponse, ChatCompletionsRequest, ChatMessage } from '@/api/types'
-
+import { modelApi, taskApi, chatApi, filesApi } from '@/api'
+import type { Model, Task, ChatCompletionsResponse, ChatCompletionsRequest, ChatMessage, ChatContentPart } from '@/api/types'
+import { AxiosError } from 'axios'
+import type { ApiErrorResponse } from '@/api/types'
 
 
 // 响应式数据
@@ -140,12 +192,21 @@ const loading = ref(false)
 const isWaitingForResponse = ref(false)
 const activeConversationId = ref<string | null>(null)
 const selectedTaskId = ref<string | null>(null)
+const selectedImageFile = ref<File | null>(null)
+const localPreviewUrl = ref<string | null>(null)
+const uploadedImageUrl = ref<string | null>(null) // 服务端 download-url (给 image_url 用)
+
+const canSendImage = computed(() => !!uploadedImageUrl.value)
+const uploading = ref(false)
+const snackbar = ref(false)
+const snackbarText = ref('')
+
 
 // 消息和对话数据
-interface Message {
+type Message = {
   id: string
   role: 'user' | 'assistant'
-  content: string
+  content: string | ChatContentPart[]
   timestamp: Date
 }
 
@@ -163,6 +224,7 @@ const messages = ref<Message[]>([])
 const conversations = ref<Conversation[]>([])
 let messageIdCounter = 0
 let conversationIdCounter = 0
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // 计算属性
 const selectedModelName = computed(() => {
@@ -172,6 +234,82 @@ const selectedModelName = computed(() => {
   }
   return ''
 })
+
+const thumbSrc = computed<string | undefined>(() => {
+  return uploadedImageUrl.value ?? localPreviewUrl.value ?? undefined
+})
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function clearSelectedImage() {
+  selectedImageFile.value = null
+  uploadedImageUrl.value = null
+
+  const preview = localPreviewUrl.value
+  if (preview) {
+    globalThis.URL.revokeObjectURL(preview)
+    localPreviewUrl.value = null
+  }
+}
+
+function onSelectImage(files: File | File[] | null) {
+  const file = Array.isArray(files) ? (files[0] ?? null) : files
+
+  selectedImageFile.value = file
+  uploadedImageUrl.value = null
+
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+
+  if (file) {
+    localPreviewUrl.value = URL.createObjectURL(file)
+  }
+}
+
+async function uploadSelectedImage() {
+  if (!selectedImageFile.value) return
+
+  uploading.value = true
+  try {
+    const file = selectedImageFile.value
+
+    const created = await filesApi.createFile({
+      originalFilename: file.name,
+      contentType: file.type || 'application/octet-stream',
+    })
+
+    const uploadUrl = await filesApi.getUploadUrl(created.id)
+
+    const putRes = await fetch(uploadUrl.url, {
+      method: uploadUrl.method ?? 'PUT',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    })
+    if (!putRes.ok) {
+      throw new Error(`Upload failed: ${putRes.status} ${putRes.statusText}`)
+    }
+
+    const downloadUrl = await filesApi.getDownloadUrl(created.id)
+    console.log('File uploaded, download URL:', downloadUrl.url)
+    uploadedImageUrl.value = downloadUrl.url
+  } catch (e) {
+    const err = e as AxiosError<ApiErrorResponse>
+    snackbarText.value =
+      err.response?.data?.message ||
+      (e instanceof Error ? e.message : '上传失败')
+    snackbar.value = true
+  } finally {
+    uploading.value = false
+  }
+}
+
+
 
 // 发送消息
 const createNewConversation = () => {
@@ -201,12 +339,35 @@ const syncMessagesFromConversation = () => {
   }
 }
 
-// 切换会话时调用（你原本应已有类似逻辑）
 const selectConversation = (conversationId: string) => {
   activeConversationId.value = conversationId
   syncMessagesFromConversation()
 }
 
+async function sendWithOptionalImage(userText: string) {
+  const parts: ChatContentPart[] = [{ type: 'text', text: userText }]
+
+  console.log('Sending messages:', uploadedImageUrl.value)
+  if (uploadedImageUrl.value) {
+    parts.push({ type: 'image_url', image_url: { url: uploadedImageUrl.value } })
+  }
+  clearSelectedImage()
+
+  const messages: ChatMessage[] = [
+    { role: 'system', content: [{ type: 'text', text: 'You are a helpful assistant' }] },
+    { role: 'user', content: parts },
+  ]
+  const res = await chatApi.sendCompletions(
+    selectedTaskId.value!,
+    {
+      completions: {
+        model: 'glm-4.6v',
+        messages,
+        max_completion_tokens: 1024,
+      },
+    })
+  return res;
+}
 // ========== 关键：仿照 sendMessage，把 handleSend 写入 conversations ==========
 const handleSend = async () => {
   if (!newMessage.value.trim() || !selectedTaskId.value) return
@@ -215,52 +376,41 @@ const handleSend = async () => {
   if (!activeConversationId.value) {
     createNewConversation()
   }
-
-  const conv = conversations.value.find(c => c.id === activeConversationId.value)
+  const conv = conversations.value.find((c) => c.id === activeConversationId.value)
   if (!conv) return
 
   const content = newMessage.value.trim()
   const now = new Date()
 
-  // 1. 先在当前会话里追加 user 消息
-  const userMsg: Message = {
+  // 1. 先在当前会话里追加 user 消息（本地展示）
+
+  if (selectedImageFile.value) {
+    await uploadSelectedImage()
+  }
+
+  const localUserMsg: Message = {
     id: `user-${Date.now()}`,
     role: 'user',
-    content,
+    content: uploadedImageUrl.value
+      ? ([
+        { type: 'text', text: content },
+        { type: 'image_url', image_url: { url: uploadedImageUrl.value } },
+      ] satisfies ChatContentPart[])
+      : content,
     timestamp: now,
   }
-  conv.messages.push(userMsg)
+
+  conv.messages.push(localUserMsg)
   conv.updatedAt = now
-
-  // 同步到当前 messages 引用
   messages.value = conv.messages
-
   newMessage.value = ''
 
   // 2. 调用 chat 接口
   isWaitingForResponse.value = true
   loading.value = true
   try {
-    const payload: ChatCompletionsRequest = {
-      completions: {
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant',
-          },
-          {
-            role: 'user',
-            content,
-          },
-        ],
-        max_completion_tokens: 10,
-      },
-    }
-
-    const res = await chatApi.sendCompletions(selectedTaskId.value, payload)
-    const data: ChatCompletionsResponse = res.data
-
+    // sendWithOptionalImage() 返回 Promise<ChatCompletionsResponse>
+    const data = await sendWithOptionalImage(content)
     const assistantContent = data.response.choices[0]?.message.content ?? ''
 
     if (assistantContent) {
@@ -268,18 +418,22 @@ const handleSend = async () => {
         id: data.response.id,
         role: 'assistant',
         content: assistantContent,
-        timestamp: new Date(data.response.created * 1000)
+        timestamp: new Date(data.response.created * 1000),
       }
 
       // 3. 把 assistant 消息也写入当前会话
       conv.messages.push(assistantMsg)
       conv.updatedAt = assistantMsg.timestamp
-
-      // 同步到 messages
       messages.value = conv.messages
     }
-  } catch (error) {
-    console.error('发送聊天失败:', error)
+
+    // 发送成功后清理图片状态，避免下一条继续携带
+    selectedImageFile.value = null
+    uploadedImageUrl.value = null
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value)
+      localPreviewUrl.value = null
+    }
   } finally {
     isWaitingForResponse.value = false
     loading.value = false
@@ -357,70 +511,6 @@ const startNewConversation = () => {
   inputMessage.value = ''
 }
 
-
-
-// const sendMessage = async () => {
-//   if (!inputMessage.value.trim() || !selectedModelId.value) return
-
-//   const userMessage: Message = {
-//     id: `msg-${messageIdCounter++}`,
-//     role: 'user',
-//     content: inputMessage.value,
-//     timestamp: new Date(),
-//   }
-
-//   messages.value.push(userMessage)
-//   inputMessage.value = ''
-
-//   // 如果这是对话的第一条消息，创建新对话
-//   if (activeConversationId.value === null) {
-//     const newConvId = `conv-${conversationIdCounter++}`
-//     activeConversationId.value = newConvId
-//   }
-
-//   // 更新或创建对话
-//   const convIndex = conversations.value.findIndex((c) => c.id === activeConversationId.value)
-//   if (convIndex >= 0) {
-//     conversations.value[convIndex].messages.push(userMessage)
-//   } else {
-//     conversations.value.push({
-//       id: activeConversationId.value!,
-//       title: userMessage.content.slice(0, 30) + (userMessage.content.length > 30 ? '...' : ''),
-//       createdAt: new Date(),
-//       messages: [userMessage],
-//     })
-//   }
-
-//   // 模拟AI回复
-//   isWaitingForResponse.value = true
-
-//   // 延迟模拟回复
-//   setTimeout(() => {
-//     const assistantMessage: Message = {
-//       id: `msg-${messageIdCounter++}`,
-//       role: 'assistant',
-//       content: `感谢您的问题："${userMessage.content.slice(0, 50)}${userMessage.content.length > 50 ? '...' : ''}"。这是来自 ${selectedModelName.value} 的模拟回复。在实际应用中，这里会显示AI模型的真实回复。`,
-//       timestamp: new Date(),
-//     }
-
-//     messages.value.push(assistantMessage)
-
-//     // 更新对话中的消息
-//     const convIndex = conversations.value.findIndex((c) => c.id === activeConversationId.value)
-//     if (convIndex >= 0) {
-//       conversations.value[convIndex].messages.push(assistantMessage)
-//     }
-
-//     isWaitingForResponse.value = false
-//     nextTick(() => {
-//       const messagesArea = document.querySelector('.messages-list')
-//       if (messagesArea) {
-//         messagesArea.scrollTop = messagesArea.scrollHeight
-//       }
-//     })
-//   }, 1500)
-// }
-
 // 生命周期钩子
 onMounted(() => {
   loadModels()
@@ -453,6 +543,7 @@ onMounted(() => {
   background-color: #f9f9f9;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .welcome-section {
@@ -635,5 +726,257 @@ onMounted(() => {
   .message-content {
     max-width: 90%;
   }
+}
+
+.image-bubble__thumb {
+  position: relative;
+  display: inline-block;
+}
+
+.image-bubble__clear {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+}
+
+/* 可选：hover 更明显 */
+.image-bubble__clear:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+
+.image-bubble-row {
+  display: flex;
+  justify-content: flex-start;
+  /* 与输入框左侧对齐 */
+}
+
+.image-bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  max-width: min(520px, 100%);
+  padding: 10px 10px;
+  border-radius: 14px;
+
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+
+  /* 让气泡看起来“贴着”输入框 */
+  margin-bottom: 8px;
+}
+
+/* 小尾巴：朝下连接输入框 */
+.image-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+
+  background: rgb(var(--v-theme-surface));
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.message-list {
+  padding-bottom: 88px;
+}
+
+/* 悬浮在主聊天区域底部（v-divider 上方） */
+.floating-image-bubble {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 12px;
+  display: flex;
+  justify-content: flex-start;
+  pointer-events: none;
+  /* 不阻挡消息区滚动 */
+}
+
+.floating-image-bubble .image-bubble {
+  pointer-events: auto;
+  /* 允许点击“清除” */
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  max-width: min(520px, 100%);
+  padding: 10px;
+  border-radius: 14px;
+
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.floating-image-bubble .image-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: rgb(var(--v-theme-surface));
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.image-picker :deep(.v-field) {
+  width: 44px;
+  height: 44px;
+  /* 变成正方形 */
+  border-radius: 8px;
+  /* 需要完全直角就改成 0 */
+}
+
+.image-picker :deep(.v-field__field) {
+  min-height: 44px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.image-picker :deep(.v-field__input) {
+  display: none;
+  /* 继续隐藏文件名 */
+}
+
+.image-picker :deep(.v-field__prepend-inner) {
+  margin-inline-start: 0;
+}
+
+/* 让图标在正方形里水平垂直居中 */
+.image-picker :deep(.v-field__prepend-inner),
+.image-picker :deep(.v-field__append-inner) {
+  align-items: center;
+}
+
+.image-picker :deep(.v-field__outline) {
+  border-radius: 8px;
+  /* 与 v-field 保持一致 */
+}
+
+.message-input-container {
+  background: white;
+  border-radius: 24px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+.image-upload-btn {
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.image-upload-btn:hover:not(:disabled) {
+  border-color: var(--v-primary-base);
+  background-color: rgba(var(--v-theme-primary), 0.04);
+}
+
+.image-upload-btn:disabled {
+  opacity: 0.5;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.message-input {
+  --v-field-border-radius: 20px;
+  --v-input-control-height: 36px;
+}
+
+.message-input :deep(.v-field) {
+  border-radius: 16px;
+  background: #f8f9fa;
+  border: none;
+  box-shadow: none;
+}
+
+.message-input :deep(.v-field__input) {
+  min-height: 36px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.send-btn {
+  margin-left: 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.send-btn:not(:disabled) {
+  background: linear-gradient(135deg, var(--v-primary-base), #6c8eff);
+  box-shadow: 0 2px 8px rgba(var(--v-theme-primary), 0.3);
+}
+
+.send-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.4);
+}
+
+.send-btn:disabled {
+  background: #e0e0e0;
+  color: #9e9e9e;
+}
+
+/* 悬停效果 */
+.message-input-container:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: #d0d0d0;
+}
+
+/* 聚焦效果 */
+.message-input :deep(.v-field--focused) {
+  background: white;
+  box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 600px) {
+  .message-input-container {
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+
+  .image-upload-btn,
+  .send-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}
+
+/* 图片本身决定气泡大小：块级、按比例缩放、不被裁剪 */
+.chat-image {
+  display: block;
+  min-width: 300px;
+  border-radius: 12px;
+}
+
+.chat-image :deep(img) {
+  object-fit: contain;
+  width: 100%;
+  height: auto;
 }
 </style>
