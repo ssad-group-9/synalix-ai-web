@@ -177,9 +177,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { modelApi, taskApi, chatApi, filesApi } from '@/api'
-import type { Model, Task, ChatCompletionsResponse, ChatCompletionsRequest, ChatMessage, ChatContentPart } from '@/api/types'
+import type { Model, Task, ChatMessage, ChatContentPart } from '@/api/types'
 import { AxiosError } from 'axios'
 import type { ApiErrorResponse } from '@/api/types'
+import { storeToRefs } from 'pinia'
+import { useChatStore } from '@/stores/chat'
 
 
 // 响应式数据
@@ -190,7 +192,6 @@ const selectedModelId = ref<string>('')
 const inputMessage = ref('')
 const loading = ref(false)
 const isWaitingForResponse = ref(false)
-const activeConversationId = ref<string | null>(null)
 const selectedTaskId = ref<string | null>(null)
 const selectedImageFile = ref<File | null>(null)
 const localPreviewUrl = ref<string | null>(null)
@@ -200,6 +201,9 @@ const canSendImage = computed(() => !!uploadedImageUrl.value)
 const uploading = ref(false)
 const snackbar = ref(false)
 const snackbarText = ref('')
+
+const chatStore = useChatStore()
+const { conversations, activeConversationId } = storeToRefs(chatStore)
 
 
 // 消息和对话数据
@@ -221,7 +225,7 @@ interface Conversation {
 }
 
 const messages = ref<Message[]>([])
-const conversations = ref<Conversation[]>([])
+// const conversations = ref<Conversation[]>([])
 let messageIdCounter = 0
 let conversationIdCounter = 0
 const fileInputRef = ref<HTMLInputElement | null>(null)
