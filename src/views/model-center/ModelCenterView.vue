@@ -168,6 +168,10 @@
                   </v-list>
                 </template>
 
+                <template v-else>
+                  <div class="text-body-2 text-grey-600">暂无 ModelCheckpoints 数据。</div>
+                </template>
+
                 <div class="text-subtitle-2 mb-2">AdapterCheckpoints</div>
 
                 <template v-if="adapterCheckpoints.length">
@@ -200,7 +204,7 @@
                 </template>
 
                 <template v-else>
-                  <div class="text-body-2 text-grey-600">暂无 checkpoints 数据。</div>
+                  <div class="text-body-2 text-grey-600">暂无 AdapterCheckpoints 数据。</div>
                 </template>
               </v-card>
             </v-col>
