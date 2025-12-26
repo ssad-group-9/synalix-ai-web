@@ -85,6 +85,17 @@ const router = createRouter({
             hideToolbar: true,
           },
         },
+        {
+          path: 'gpu',
+          name: 'admin-gpu',
+          component: () => import('../views/admin/GpuManagementView.vue'),
+          meta: {
+            title: 'GPU管理',
+            requiresAuth: true,
+            requiresAdmin: true,
+            hideToolbar: true,
+          },
+        },
       ],
     },
     {
@@ -113,19 +124,24 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const loadingStore = useLoadingStore()
   const isAuthenticated = authStore.isAuthenticated()
-  
+
   // 开始加载
   loadingStore.startLoading()
 
   // 如果访问需要游客身份的页面（如登录页），但用户已登录
   if (to.meta.requiresGuest && isAuthenticated) {
+    loadingStore.stopLoading()
     next('/overview')
     return
   }
 
   // 检查是否需要认证
   if (to.meta.requiresAuth && !isAuthenticated) {
+    // 清除可能残留的无效认证信息
+    authStore.clearAuth()
+
     // 重定向到登录页面，并保存目标路由
+    loadingStore.stopLoading()
     next({
       name: 'login',
       query: { redirect: to.fullPath },
@@ -136,6 +152,7 @@ router.beforeEach((to, from, next) => {
   // 检查是否需要管理员权限
   if (to.meta.requiresAdmin && !authStore.isAdmin()) {
     // 重定向到概览页面
+    loadingStore.stopLoading()
     next('/overview')
     return
   }
@@ -150,7 +167,7 @@ router.afterEach((to) => {
   setTimeout(() => {
     loadingStore.stopLoading()
   }, 50) // 短暂延迟确保页面开始渲染
-  
+
   // 更新页面标题
   const pageTitle = to.meta.title as string
   if (pageTitle) {

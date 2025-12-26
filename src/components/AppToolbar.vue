@@ -19,6 +19,9 @@
         <!-- 右侧：用户信息和管理按钮 -->
         <div class="user-section">
             <div v-if="authStore.user">
+                <!-- 消息通知按钮 -->
+                <NotificationMenu />
+
                 <!-- 管理控制台按钮（仅管理员可见） -->
                 <v-btn v-if="authStore.isAdmin()" icon @click="goToAdmin" class="mr-2">
                     <v-icon icon="mdi-cog" />
@@ -49,12 +52,13 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getGravatarUrl } from '@/utils/gravatar'
+import NotificationMenu from './NotificationMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 导航项目
+// 导航项目 - 所有用户都可以访问所有页面
 const navigationItems = [
     { name: 'overview', title: '概览', to: '/overview' },
     { name: 'model-center', title: '模型中心', to: '/model-center' },

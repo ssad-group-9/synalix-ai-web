@@ -19,8 +19,8 @@ const mockUsers = [
   {
     id: 'user-2',
     username: 'user1',
-    nickname: '用户1',
-    email: 'user1@example.com',
+    nickname: '张三',
+    email: 'zhangsan@example.com',
     role: 'USER',
     enabled: true,
     createdAt: '2024-01-05T10:00:00Z',
@@ -28,11 +28,148 @@ const mockUsers = [
   {
     id: 'user-3',
     username: 'user2',
-    nickname: '用户2',
-    email: 'user2@example.com',
+    nickname: '李四',
+    email: 'lisi@example.com',
     role: 'USER',
     enabled: true,
     createdAt: '2024-01-10T10:00:00Z',
+  },
+]
+
+// 当前登录的用户（用于模拟不同角色登录）
+let currentUser = mockUsers[0] // 默认为管理员
+
+// 模拟通知数据 - 按用户分组
+const mockNotificationsByUser: Record<string, any[]> = {
+  'user-1': [ // 管理员的通知
+    {
+      id: 'notif-admin-1',
+      userId: 'user-1',
+      title: '新用户注册通知',
+      content: '用户"李四"已成功注册，请及时审核用户权限。',
+      type: 'INFO',
+      read: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15分钟前
+    },
+    {
+      id: 'notif-admin-2',
+      userId: 'user-1',
+      title: 'GPU资源告警',
+      content: 'GPU-6已离线，请检查硬件状态。',
+      type: 'ERROR',
+      read: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45分钟前
+    },
+    {
+      id: 'notif-admin-3',
+      userId: 'user-1',
+      title: '系统维护通知',
+      content: '系统将于今晚22:00-24:00进行维护升级，期间可能影响部分功能使用。',
+      type: 'WARNING',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2小时前
+    },
+    {
+      id: 'notif-admin-4',
+      userId: 'user-1',
+      title: '新功能上线',
+      content: '平台新增聊天交互功能，现在可以直接与训练好的模型进行对话测试。',
+      type: 'INFO',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1天前
+    },
+  ],
+  'user-2': [ // 张三的通知
+    {
+      id: 'notif-user1-1',
+      userId: 'user-2',
+      title: '任务完成通知',
+      content: '您的训练任务"Llama微调任务"已成功完成，模型已保存到模型库。',
+      type: 'SUCCESS',
+      read: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30分钟前
+    },
+    {
+      id: 'notif-user1-2',
+      userId: 'user-2',
+      title: 'GPU权限更新',
+      content: '您的GPU使用权限已更新，现在可以使用GPU-0, GPU-2, GPU-4。',
+      type: 'INFO',
+      read: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1小时前
+    },
+    {
+      id: 'notif-user1-3',
+      userId: 'user-2',
+      title: '数据集上传成功',
+      content: '您上传的数据集"中文NLP数据集"已成功处理，现在可以用于训练任务。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+    },
+  ],
+  'user-3': [ // 李四的通知
+    {
+      id: 'notif-user2-1',
+      userId: 'user-3',
+      title: '任务失败通知',
+      content: '训练任务"ResNet-50微调"执行失败，错误原因：GPU内存不足。请检查配置后重试。',
+      type: 'ERROR',
+      read: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(), // 20分钟前
+    },
+    {
+      id: 'notif-user2-2',
+      userId: 'user-3',
+      title: 'GPU权限更新',
+      content: '您的GPU使用权限已更新，现在可以使用GPU-1, GPU-3。',
+      type: 'INFO',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3小时前
+    },
+    {
+      id: 'notif-user2-3',
+      userId: 'user-3',
+      title: '欢迎使用平台',
+      content: '欢迎使用Synalix AI训练平台，如有问题请联系管理员。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2天前
+    },
+  ],
+}
+
+// 模拟GPU资源数据
+const mockGpuResources = [
+  { id: 0, name: 'GPU-0', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 2048, memoryFree: 22528 },
+  { id: 1, name: 'GPU-1', status: 'BUSY', memoryTotal: 24576, memoryUsed: 20480, memoryFree: 4096 },
+  { id: 2, name: 'GPU-2', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 4096, memoryFree: 20480 },
+  { id: 3, name: 'GPU-3', status: 'BUSY', memoryTotal: 24576, memoryUsed: 18432, memoryFree: 6144 },
+  { id: 4, name: 'GPU-4', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 0, memoryFree: 24576 },
+  { id: 5, name: 'GPU-5', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 0, memoryFree: 24576 },
+  { id: 6, name: 'GPU-6', status: 'OFFLINE', memoryTotal: 24576, memoryUsed: 0, memoryFree: 0 },
+  { id: 7, name: 'GPU-7', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 1024, memoryFree: 23552 },
+]
+
+// 模拟用户GPU权限数据
+let mockUserGpuPermissions = [
+  {
+    userId: 'user-1',
+    username: 'admin',
+    nickname: '管理员',
+    allowedGpuIds: [0, 1, 2, 3, 4, 5, 6, 7], // 管理员可以使用所有GPU
+  },
+  {
+    userId: 'user-2',
+    username: 'user1',
+    nickname: '张三',
+    allowedGpuIds: [0, 2, 4], // 普通用户只能使用部分GPU
+  },
+  {
+    userId: 'user-3',
+    username: 'user2',
+    nickname: '李四',
+    allowedGpuIds: [1, 3], // 普通用户只能使用部分GPU
   },
 ]
 
@@ -201,13 +338,20 @@ export const handlers = [
   // ==================== 认证相关 ====================
   http.post(`${getBaseUrl()}/api/auth/login`, async ({ request }) => {
     const body = (await request.json()) as { username: string; password: string }
-    const user = mockUsers[0] // 模拟登录为管理员
+
+    // 根据用户名查找用户
+    const user = mockUsers.find(u => u.username === body.username)
+
     if (!user) {
       return HttpResponse.json(
         { error: { code: 404, message: '用户不存在' } },
         { status: 404 }
-      ) // 如果用户不存在，返回错误
+      )
     }
+
+    // 设置当前登录用户（用于其他API返回对应用户的数据）
+    currentUser = user
+
     return HttpResponse.json({
       accessToken: 'mock-access-token-' + Date.now(),
       refreshToken: 'mock-refresh-token-' + Date.now(),
@@ -236,10 +380,12 @@ export const handlers = [
   }),
 
   // ==================== 用户相关 ====================
+  http.get(`${getBaseUrl()}/api/users/me`, () => {
+    return HttpResponse.json(currentUser)
+  }),
+
   http.get(`${getBaseUrl()}/api/users/current`, () => {
-    return HttpResponse.json(
-      mockUsers[0],
-    )
+    return HttpResponse.json(currentUser)
   }),
 
   http.get(`${getBaseUrl()}/api/users`, () => {
@@ -572,6 +718,95 @@ export const handlers = [
   http.get(`${getBaseUrl()}/api/resources`, () => {
     return HttpResponse.json(
       mockResources,
+    )
+  }),
+
+  // ==================== 通知相关 ====================
+  http.get(`${getBaseUrl()}/api/notifications`, () => {
+    // 获取当前用户的通知
+    const userNotifications = mockNotificationsByUser[currentUser.id] || []
+    const unreadCount = userNotifications.filter(n => !n.read).length
+    return HttpResponse.json({
+      notifications: userNotifications,
+      unreadCount: unreadCount,
+    })
+  }),
+
+  http.patch(`${getBaseUrl()}/api/notifications/:id/read`, ({ params }) => {
+    // 在当前用户的通知中查找
+    const userNotifications = mockNotificationsByUser[currentUser.id] || []
+    const notification = userNotifications.find(n => n.id === params.id)
+    if (notification) {
+      notification.read = true
+      return HttpResponse.json(null, { status: 200 })
+    }
+    return HttpResponse.json(
+      { error: { code: 404, message: '通知不存在' } },
+      { status: 404 }
+    )
+  }),
+
+  http.patch(`${getBaseUrl()}/api/notifications/read-all`, () => {
+    // 标记当前用户的所有通知为已读
+    const userNotifications = mockNotificationsByUser[currentUser.id] || []
+    userNotifications.forEach(n => n.read = true)
+    return HttpResponse.json(null, { status: 200 })
+  }),
+
+  http.delete(`${getBaseUrl()}/api/notifications/:id`, ({ params }) => {
+    // 删除当前用户的特定通知
+    const userNotifications = mockNotificationsByUser[currentUser.id] || []
+    const index = userNotifications.findIndex(n => n.id === params.id)
+    if (index !== -1) {
+      userNotifications.splice(index, 1)
+      return HttpResponse.json(null, { status: 200 })
+    }
+    return HttpResponse.json(
+      { error: { code: 404, message: '通知不存在' } },
+      { status: 404 }
+    )
+  }),
+
+  http.delete(`${getBaseUrl()}/api/notifications/read`, () => {
+    // 删除当前用户的所有已读通知
+    const userNotifications = mockNotificationsByUser[currentUser.id] || []
+    const unreadNotifications = userNotifications.filter(n => !n.read)
+    mockNotificationsByUser[currentUser.id] = unreadNotifications
+    return HttpResponse.json(null, { status: 200 })
+  }),
+
+  // ==================== GPU管理相关 ====================
+  http.get(`${getBaseUrl()}/api/gpu/resources`, () => {
+    return HttpResponse.json(mockGpuResources)
+  }),
+
+  http.get(`${getBaseUrl()}/api/gpu/permissions`, () => {
+    return HttpResponse.json(mockUserGpuPermissions)
+  }),
+
+  http.get(`${getBaseUrl()}/api/gpu/permissions/:userId`, ({ params }) => {
+    const permission = mockUserGpuPermissions.find(p => p.userId === params.userId)
+    if (permission) {
+      return HttpResponse.json(permission)
+    }
+    return HttpResponse.json(
+      { error: { code: 404, message: '用户权限不存在' } },
+      { status: 404 }
+    )
+  }),
+
+  http.put(`${getBaseUrl()}/api/gpu/permissions/:userId`, async ({ params, request }) => {
+    const body = (await request.json()) as { gpuIds: number[] }
+    const index = mockUserGpuPermissions.findIndex(p => p.userId === params.userId)
+
+    if (index !== -1) {
+      mockUserGpuPermissions[index].allowedGpuIds = body.gpuIds
+      return HttpResponse.json(mockUserGpuPermissions[index])
+    }
+
+    return HttpResponse.json(
+      { error: { code: 404, message: '用户权限不存在' } },
+      { status: 404 }
     )
   }),
 ]

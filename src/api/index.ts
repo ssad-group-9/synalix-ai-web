@@ -183,3 +183,9 @@ export const htmlApi = {
   // 获取GPU资源列表及状态
   getHtml: (url: string) => apiClient.get<string>(url),
 }
+
+// 导出通知API
+export { notificationApi } from './notification'
+
+// 导出GPU管理API
+export { gpuApi } from './gpu'

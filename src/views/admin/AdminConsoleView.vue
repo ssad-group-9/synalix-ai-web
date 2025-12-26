@@ -86,6 +86,12 @@ const navigationItems = [
         to: '/admin/users',
         icon: 'mdi-account-group'
     },
+    {
+        name: 'admin-gpu',
+        title: 'GPU管理',
+        to: '/admin/gpu',
+        icon: 'mdi-chip'
+    },
     // 可以在这里扩展更多管理功能
 ]
 
