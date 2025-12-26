@@ -200,7 +200,10 @@ const savePermission = async () => {
     // 更新本地数据
     const index = userPermissions.value.findIndex((p) => p.userId === editingPermission.value!.userId)
     if (index !== -1) {
-      userPermissions.value[index].allowedGpuIds = [...selectedGpuIds.value]
+      const permission = userPermissions.value[index]
+      if (permission) {
+        permission.allowedGpuIds = [...selectedGpuIds.value]
+      }
     }
 
     editDialog.value = false
