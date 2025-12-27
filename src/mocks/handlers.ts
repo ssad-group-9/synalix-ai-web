@@ -107,6 +107,42 @@ const mockNotificationsByUser: Record<string, any[]> = {
       read: true,
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
     },
+    {
+      id: 'notif-user1-4',
+      userId: 'user-2',
+      title: '数据集上传成功',
+      content: '您上传的数据集"中文NLP数据集"已成功处理，现在可以用于训练任务。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+    },
+    {
+      id: 'notif-user1-5',
+      userId: 'user-2',
+      title: '数据集上传成功',
+      content: '您上传的数据集"中文NLP数据集"已成功处理，现在可以用于训练任务。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+    },
+    {
+      id: 'notif-user1-6',
+      userId: 'user-2',
+      title: '数据集上传成功',
+      content: '您上传的数据集"中文NLP数据集"已成功处理，现在可以用于训练任务。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+    },
+    {
+      id: 'notif-user1-7',
+      userId: 'user-2',
+      title: '数据集上传成功',
+      content: '您上传的数据集"中文NLP数据集"已成功处理，现在可以用于训练任务。',
+      type: 'SUCCESS',
+      read: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+    },
   ],
   'user-3': [ // 李四的通知
     {
