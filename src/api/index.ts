@@ -184,8 +184,8 @@ export const htmlApi = {
   getHtml: (url: string) => apiClient.get<string>(url),
 }
 
-// 导出通知API
-export { notificationApi } from './notification'
+// 导出消息API
+export { messageApi } from './message'
 
 // 导出GPU管理API
 export { gpuApi } from './gpu'

@@ -139,6 +139,66 @@ const mockNotificationsByUser: Record<string, any[]> = {
   ],
 }
 
+// 模拟消息数据
+let mockMessages = [
+  {
+    id: 'msg-1',
+    messageType: 'ANNOUNCEMENT',
+    messageContent: '系统将于今晚22:00-24:00进行维护升级，期间可能影响部分功能使用。请各位用户提前保存工作进度，感谢配合！',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30分钟前
+  },
+  {
+    id: 'msg-2',
+    messageType: 'INFO',
+    messageContent: '平台新增聊天交互功能，现在可以直接与训练好的模型进行对话测试。欢迎大家体验！',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2小时前
+  },
+  {
+    id: 'msg-3',
+    messageType: 'WARNING',
+    messageContent: 'GPU-6已离线，请检查硬件状态。如有问题请联系运维人员。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5小时前
+  },
+  {
+    id: 'msg-4',
+    messageType: 'SUCCESS',
+    messageContent: '数据中心扩容完成，新增4台GPU服务器，总算力提升50%！',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1天前
+  },
+  {
+    id: 'msg-5',
+    messageType: 'INFO',
+    messageContent: '您的训练任务"Llama微调任务"已成功完成，模型已保存到模型库。',
+    visibility: 'PRIVATE',
+    targetUserId: 'user-2', // 发给张三的私密消息
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45分钟前
+  },
+  {
+    id: 'msg-6',
+    messageType: 'ERROR',
+    messageContent: '训练任务"ResNet-50微调"执行失败，错误原因：GPU内存不足。请检查配置后重试。',
+    visibility: 'PRIVATE',
+    targetUserId: 'user-3', // 发给李四的私密消息
+    createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(), // 20分钟前
+  },
+  {
+    id: 'msg-7',
+    messageType: 'SYSTEM',
+    messageContent: '系统定期备份已完成，所有数据已安全保存。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), // 12小时前
+  },
+]
+
 // 模拟GPU资源数据
 const mockGpuResources = [
   { id: 0, name: 'GPU-0', status: 'AVAILABLE', memoryTotal: 24576, memoryUsed: 2048, memoryFree: 22528 },
@@ -721,58 +781,102 @@ export const handlers = [
     )
   }),
 
-  // ==================== 通知相关 ====================
-  http.get(`${getBaseUrl()}/api/notifications`, () => {
-    // 获取当前用户的通知
-    const userNotifications = mockNotificationsByUser[currentUser.id] || []
-    const unreadCount = userNotifications.filter(n => !n.read).length
-    return HttpResponse.json({
-      notifications: userNotifications,
-      unreadCount: unreadCount,
-    })
-  }),
-
-  http.patch(`${getBaseUrl()}/api/notifications/:id/read`, ({ params }) => {
-    // 在当前用户的通知中查找
-    const userNotifications = mockNotificationsByUser[currentUser.id] || []
-    const notification = userNotifications.find(n => n.id === params.id)
-    if (notification) {
-      notification.read = true
-      return HttpResponse.json(null, { status: 200 })
+  // ==================== 消息相关 ====================
+  http.post(`${getBaseUrl()}/api/messages`, async ({ request }) => {
+    // 创建消息（仅管理员）
+    if (currentUser.role !== 'ADMIN') {
+      return HttpResponse.json(
+        { error: { code: 403, message: '只有管理员可以创建消息' } },
+        { status: 403 }
+      )
     }
-    return HttpResponse.json(
-      { error: { code: 404, message: '通知不存在' } },
-      { status: 404 }
-    )
+
+    const body = (await request.json()) as {
+      messageType: string
+      messageContent: string
+      visibility: string
+      targetUserId?: string | null
+    }
+
+    const newMessage = {
+      id: 'msg-' + Date.now(),
+      messageType: body.messageType,
+      messageContent: body.messageContent,
+      visibility: body.visibility,
+      targetUserId: body.targetUserId || null,
+      createdAt: new Date().toISOString(),
+    }
+
+    mockMessages.unshift(newMessage)
+    return HttpResponse.json(newMessage)
   }),
 
-  http.patch(`${getBaseUrl()}/api/notifications/read-all`, () => {
-    // 标记当前用户的所有通知为已读
-    const userNotifications = mockNotificationsByUser[currentUser.id] || []
-    userNotifications.forEach(n => n.read = true)
-    return HttpResponse.json(null, { status: 200 })
+  http.get(`${getBaseUrl()}/api/messages`, ({ request }) => {
+    // 获取消息列表
+    const url = new URL(request.url)
+    const all = url.searchParams.get('all') === 'true'
+
+    let visibleMessages = mockMessages
+
+    // 如果不是管理员或没有请求全部消息，则过滤
+    if (currentUser.role !== 'ADMIN' || !all) {
+      visibleMessages = mockMessages.filter(msg => {
+        // PUBLIC消息对所有人可见
+        if (msg.visibility === 'PUBLIC') return true
+        // PRIVATE消息只对目标用户可见
+        if (msg.visibility === 'PRIVATE' && msg.targetUserId === currentUser.id) return true
+        // 管理员可以看到所有消息
+        if (currentUser.role === 'ADMIN' && all) return true
+        return false
+      })
+    }
+
+    return HttpResponse.json(visibleMessages)
   }),
 
-  http.delete(`${getBaseUrl()}/api/notifications/:id`, ({ params }) => {
-    // 删除当前用户的特定通知
-    const userNotifications = mockNotificationsByUser[currentUser.id] || []
-    const index = userNotifications.findIndex(n => n.id === params.id)
+  http.get(`${getBaseUrl()}/api/messages/:messageId`, ({ params }) => {
+    // 获取单个消息详情
+    const message = mockMessages.find(m => m.id === params.messageId)
+
+    if (!message) {
+      return HttpResponse.json(
+        { error: { code: 404, message: '消息不存在' } },
+        { status: 404 }
+      )
+    }
+
+    // 访问控制检查
+    if (message.visibility === 'PRIVATE') {
+      if (currentUser.role !== 'ADMIN' && message.targetUserId !== currentUser.id) {
+        return HttpResponse.json(
+          { error: { code: 403, message: '无权访问此消息' } },
+          { status: 403 }
+        )
+      }
+    }
+
+    return HttpResponse.json(message)
+  }),
+
+  http.delete(`${getBaseUrl()}/api/messages/:messageId`, ({ params }) => {
+    // 删除消息（仅管理员）
+    if (currentUser.role !== 'ADMIN') {
+      return HttpResponse.json(
+        { error: { code: 403, message: '只有管理员可以删除消息' } },
+        { status: 403 }
+      )
+    }
+
+    const index = mockMessages.findIndex(m => m.id === params.messageId)
     if (index !== -1) {
-      userNotifications.splice(index, 1)
+      mockMessages.splice(index, 1)
       return HttpResponse.json(null, { status: 200 })
     }
+
     return HttpResponse.json(
-      { error: { code: 404, message: '通知不存在' } },
+      { error: { code: 404, message: '消息不存在' } },
       { status: 404 }
     )
-  }),
-
-  http.delete(`${getBaseUrl()}/api/notifications/read`, () => {
-    // 删除当前用户的所有已读通知
-    const userNotifications = mockNotificationsByUser[currentUser.id] || []
-    const unreadNotifications = userNotifications.filter(n => !n.read)
-    mockNotificationsByUser[currentUser.id] = unreadNotifications
-    return HttpResponse.json(null, { status: 200 })
   }),
 
   // ==================== GPU管理相关 ====================

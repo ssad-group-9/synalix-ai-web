@@ -20,7 +20,7 @@
         <div class="user-section">
             <div v-if="authStore.user">
                 <!-- 消息通知按钮 -->
-                <NotificationMenu />
+                <MessageMenu />
 
                 <!-- 管理控制台按钮（仅管理员可见） -->
                 <v-btn v-if="authStore.isAdmin()" icon @click="goToAdmin" class="mr-2">
@@ -52,7 +52,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getGravatarUrl } from '@/utils/gravatar'
-import NotificationMenu from './NotificationMenu.vue'
+import MessageMenu from './MessageMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
