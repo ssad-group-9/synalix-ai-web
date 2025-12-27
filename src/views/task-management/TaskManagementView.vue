@@ -287,7 +287,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { taskApi, modelApi, datasetApi, htmlApi, checkpointsApi, resourceApi } from '@/api'
+import { taskApi, modelApi, datasetApi, htmlApi, checkpointsApi, resourceApi, gpuApi, userApi } from '@/api'
 import type { Task, Model, Dataset, Checkpoints, Resource } from '@/api/types'
 
 // 响应式数据
@@ -572,6 +572,13 @@ const loadTasks = async () => {
   try {
     const response = await taskApi.getTasks()
     tasks.value = response.data
+    const user = (await userApi.getCurrentUser()).data
+    const userId = user.id
+    if (user.role !== 'ADMIN') {
+      tasks.value = tasks.value.filter((t) =>
+        t.createdBy === userId
+      )
+    }
   } catch (error) {
     console.error('加载任务失败:', error)
   } finally {
@@ -648,8 +655,13 @@ watch(() => taskFormData.value.modelId, async (modelId) => {
 
 const loadResources = async () => {
   try {
-    const response = await resourceApi.getResources()
+    const response = await gpuApi.getGpuResources()
+    const gpuResponse = await gpuApi.getUserGpuPermission((await userApi.getCurrentUser()).data.id)
     resources.value = response.data
+    resources.value = resources.value.filter((gpu) =>
+      gpuResponse.data.allowedGpuIds.some((id: number) => id === gpu.id)
+    )
+    console.log('可用GPU资源:', resources.value)
   } catch (error) {
     console.error('加载GPU资源失败:', error)
   }
