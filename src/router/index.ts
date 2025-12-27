@@ -120,7 +120,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const loadingStore = useLoadingStore()
   const isAuthenticated = authStore.isAuthenticated()
@@ -135,26 +135,49 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 检查是否需要认证
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    // 清除可能残留的无效认证信息
-    authStore.clearAuth()
+  // 如果需要认证，先判断 token 存在性
+  if (to.meta.requiresAuth) {
+    if (!isAuthenticated) {
+      // 清除可能残留的无效认证信息并重定向到登录页
+      authStore.clearAuth()
+      loadingStore.stopLoading()
+      next({ name: 'login', query: { redirect: to.fullPath } })
+      return
+    }
 
-    // 重定向到登录页面，并保存目标路由
-    loadingStore.stopLoading()
-    next({
-      name: 'login',
-      query: { redirect: to.fullPath },
-    })
-    return
-  }
+    // token 存在，但可能已在后端失效（例如后端重启导致服务端会话失效）
+    // 此处做一次简短的后端验证，若返回 401 则清除 auth 并重定向到登录
+    try {
+      const base = import.meta.env.VITE_API_BASE_URL || window.location.origin
+      const resp = await fetch(`${base}/api/users/me`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authStore.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',
+      })
 
-  // 检查是否需要管理员权限
-  if (to.meta.requiresAdmin && !authStore.isAdmin()) {
-    // 重定向到概览页面
-    loadingStore.stopLoading()
-    next('/overview')
-    return
+      if (resp.status === 401) {
+        throw new Error('unauthorized')
+      }
+      // 可选：如果需要，更新本地用户信息（当后端返回用户数据时）
+      // const data = await resp.json()
+      // authStore.setUser(data)
+    } catch (e) {
+      authStore.clearAuth()
+      loadingStore.stopLoading()
+      next({ name: 'login', query: { redirect: to.fullPath } })
+      return
+    }
+
+    // 检查是否需要管理员权限
+    if (to.meta.requiresAdmin && !authStore.isAdmin()) {
+      // 重定向到概览页面
+      loadingStore.stopLoading()
+      next('/overview')
+      return
+    }
   }
 
   next()
