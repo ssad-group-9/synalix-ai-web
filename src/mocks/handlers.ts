@@ -37,7 +37,104 @@ const mockUsers = [
 ]
 
 // 当前登录的用户（用于模拟不同角色登录）
-let currentUser = mockUsers[0] // 默认为管理员
+let currentUser: typeof mockUsers[0] | null = null // 初始未登录
+
+// Token管理 - 用于模拟token失效
+interface TokenInfo {
+  accessToken: string
+  refreshToken: string
+  userId: string
+  accessTokenExpiry: number // 过期时间戳
+  refreshTokenExpiry: number
+}
+
+const tokens = new Map<string, TokenInfo>()
+
+// 在浏览器控制台可用的调试函数
+if (typeof window !== 'undefined') {
+  (window as any).mockDebug = {
+    // 查看当前登录用户
+    getCurrentUser: () => {
+      console.log('当前登录用户:', currentUser)
+      return currentUser
+    },
+    // 查看所有token
+    getAllTokens: () => {
+      const tokenList = Array.from(tokens.entries()).map(([key, value]) => ({
+        token: key.substring(0, 30) + '...',
+        userId: value.userId,
+        accessExpiry: new Date(value.accessTokenExpiry).toLocaleString('zh-CN'),
+        refreshExpiry: new Date(value.refreshTokenExpiry).toLocaleString('zh-CN'),
+        accessExpired: Date.now() > value.accessTokenExpiry,
+        refreshExpired: Date.now() > value.refreshTokenExpiry,
+      }))
+      console.table(tokenList)
+      return tokenList
+    },
+    // 清除所有token（模拟全部过期）
+    clearAllTokens: () => {
+      tokens.clear()
+      console.log('所有token已清除')
+    },
+    // 使当前access token立即过期
+    expireAccessToken: () => {
+      if (!currentUser) {
+        console.warn('没有登录用户')
+        return
+      }
+      const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+      const tokenInfo = tokens.get(auth.accessToken)
+      if (tokenInfo) {
+        tokenInfo.accessTokenExpiry = Date.now() - 1000
+        console.log('Access token已设置为过期状态，请刷新页面或调用API测试')
+      } else {
+        console.warn('未找到当前token')
+      }
+    },
+  }
+  console.log('💡 Mock调试工具已加载，在控制台输入 mockDebug 查看可用命令')
+}
+
+// 生成token
+const generateTokens = (userId: string) => {
+  const now = Date.now()
+  const accessToken = `mock-access-token-${userId}-${now}`
+  const refreshToken = `mock-refresh-token-${userId}-${now}`
+
+  const tokenInfo: TokenInfo = {
+    accessToken,
+    refreshToken,
+    userId,
+    accessTokenExpiry: now + 300000, // 5分钟后过期
+    refreshTokenExpiry: now + 604800000, // 7天后过期
+  }
+
+  tokens.set(accessToken, tokenInfo)
+  tokens.set(refreshToken, tokenInfo)
+
+  return { accessToken, refreshToken }
+}
+
+// 验证access token
+const validateAccessToken = (token: string): boolean => {
+  const tokenInfo = tokens.get(token)
+  if (!tokenInfo) return false
+  return Date.now() < tokenInfo.accessTokenExpiry
+}
+
+// 验证refresh token
+const validateRefreshToken = (token: string): boolean => {
+  const tokenInfo = tokens.get(token)
+  if (!tokenInfo) return false
+  return Date.now() < tokenInfo.refreshTokenExpiry
+}
+
+// 从请求头获取token
+const getTokenFromRequest = (request: Request): string | null => {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null
+  return authHeader.substring(7)
+}
 
 // 模拟通知数据 - 按用户分组
 const mockNotificationsByUser: Record<string, any[]> = {
@@ -232,6 +329,94 @@ let mockMessages = [
     visibility: 'PUBLIC',
     targetUserId: null,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), // 12小时前
+  },
+  {
+    id: 'msg-8',
+    messageType: 'INFO',
+    messageContent: '新版本更新：优化了模型训练速度，平均提升20%效率。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18小时前
+  },
+  {
+    id: 'msg-9',
+    messageType: 'SUCCESS',
+    messageContent: '您的数据集"ImageNet子集"已通过审核，可以正常使用。',
+    visibility: 'PRIVATE',
+    targetUserId: 'user-2', // 发给张三
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2天前
+  },
+  {
+    id: 'msg-10',
+    messageType: 'WARNING',
+    messageContent: '检测到GPU-3温度过高，已自动降频保护。请检查散热系统。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3天前
+  },
+  {
+    id: 'msg-11',
+    messageType: 'ANNOUNCEMENT',
+    messageContent: '平台将在下周进行大版本更新，届时会增加更多AI模型支持。敬请期待！',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(), // 4天前
+  },
+  {
+    id: 'msg-12',
+    messageType: 'INFO',
+    messageContent: '您的账户已升级，现在可以同时运行3个训练任务。',
+    visibility: 'PRIVATE',
+    targetUserId: 'user-3', // 发给李四
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5天前
+  },
+  {
+    id: 'msg-13',
+    messageType: 'SUCCESS',
+    messageContent: '系统安全扫描完成，未发现安全漏洞。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(), // 6天前
+  },
+  {
+    id: 'msg-14',
+    messageType: 'ERROR',
+    messageContent: '您的推理任务"文本生成测试"因超时而终止，请检查输入数据大小。',
+    visibility: 'PRIVATE',
+    targetUserId: 'user-2', // 发给张三
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(), // 7天前
+  },
+  {
+    id: 'msg-15',
+    messageType: 'SYSTEM',
+    messageContent: '数据库优化完成，查询速度提升30%。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(), // 8天前
+  },
+  {
+    id: 'msg-16',
+    messageType: 'INFO',
+    messageContent: '新增在线文档中心，您可以查看详细的API使用说明和示例代码。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9).toISOString(), // 9天前
+  },
+  {
+    id: 'msg-17',
+    messageType: 'WARNING',
+    messageContent: '存储空间使用率已达85%，建议及时清理不需要的模型和数据。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), // 10天前
+  },
+  {
+    id: 'msg-18',
+    messageType: 'ANNOUNCEMENT',
+    messageContent: '平台用户数突破10000，感谢大家的支持！我们会继续优化服务质量。',
+    visibility: 'PUBLIC',
+    targetUserId: null,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(), // 12天前
   },
 ]
 
@@ -448,9 +633,14 @@ export const handlers = [
     // 设置当前登录用户（用于其他API返回对应用户的数据）
     currentUser = user
 
+    // 生成token
+    const { accessToken, refreshToken } = generateTokens(user.id)
+
+    console.log(`[Mock] 用户 ${user.username} 登录成功，access token将在5分钟后过期`)
+
     return HttpResponse.json({
-      accessToken: 'mock-access-token-' + Date.now(),
-      refreshToken: 'mock-refresh-token-' + Date.now(),
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -463,9 +653,41 @@ export const handlers = [
   }),
 
   http.post(`${getBaseUrl()}/api/auth/refresh`, async ({ request }) => {
+    const body = (await request.json()) as { refreshToken: string }
+
+    // 验证refresh token
+    if (!validateRefreshToken(body.refreshToken)) {
+      console.log('[Mock] Refresh token无效或已过期')
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Refresh token无效或已过期' } },
+        { status: 401 }
+      )
+    }
+
+    const tokenInfo = tokens.get(body.refreshToken)
+    if (!tokenInfo) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Invalid refresh token' } },
+        { status: 401 }
+      )
+    }
+
+    // 生成新的access token，保持refresh token不变
+    const now = Date.now()
+    const newAccessToken = `mock-access-token-${tokenInfo.userId}-${now}`
+
+    const newTokenInfo: TokenInfo = {
+      ...tokenInfo,
+      accessToken: newAccessToken,
+      accessTokenExpiry: now + 300000, // 新的access token 5分钟后过期
+    }
+
+    tokens.set(newAccessToken, newTokenInfo)
+
+    console.log(`[Mock] Access token已刷新，新token将在5分钟后过期`)
+
     return HttpResponse.json({
-      accessToken: 'mock-access-token-' + Date.now(),
-      refreshToken: 'mock-refresh-token-' + Date.now(),
+      accessToken: newAccessToken,
     })
   }),
 
@@ -476,7 +698,25 @@ export const handlers = [
   }),
 
   // ==================== 用户相关 ====================
-  http.get(`${getBaseUrl()}/api/users/me`, () => {
+  http.get(`${getBaseUrl()}/api/users/me`, ({ request }) => {
+    const token = getTokenFromRequest(request)
+
+    // 验证token
+    if (!token || !validateAccessToken(token)) {
+      console.log('[Mock] Access token无效或已过期，返回401')
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Unauthorized' } },
+        { status: 401 }
+      )
+    }
+
+    if (!currentUser) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Not authenticated' } },
+        { status: 401 }
+      )
+    }
+
     return HttpResponse.json(currentUser)
   }),
 
@@ -820,6 +1060,13 @@ export const handlers = [
   // ==================== 消息相关 ====================
   http.post(`${getBaseUrl()}/api/messages`, async ({ request }) => {
     // 创建消息（仅管理员）
+    if (!currentUser) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Not authenticated' } },
+        { status: 401 }
+      )
+    }
+
     if (currentUser.role !== 'ADMIN') {
       return HttpResponse.json(
         { error: { code: 403, message: '只有管理员可以创建消息' } },
@@ -849,6 +1096,13 @@ export const handlers = [
 
   http.get(`${getBaseUrl()}/api/messages`, ({ request }) => {
     // 获取消息列表
+    if (!currentUser) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Not authenticated' } },
+        { status: 401 }
+      )
+    }
+
     const url = new URL(request.url)
     const all = url.searchParams.get('all') === 'true'
 
@@ -860,9 +1114,9 @@ export const handlers = [
         // PUBLIC消息对所有人可见
         if (msg.visibility === 'PUBLIC') return true
         // PRIVATE消息只对目标用户可见
-        if (msg.visibility === 'PRIVATE' && msg.targetUserId === currentUser.id) return true
+        if (msg.visibility === 'PRIVATE' && msg.targetUserId === currentUser!.id) return true
         // 管理员可以看到所有消息
-        if (currentUser.role === 'ADMIN' && all) return true
+        if (currentUser!.role === 'ADMIN' && all) return true
         return false
       })
     }
@@ -872,6 +1126,13 @@ export const handlers = [
 
   http.get(`${getBaseUrl()}/api/messages/:messageId`, ({ params }) => {
     // 获取单个消息详情
+    if (!currentUser) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Not authenticated' } },
+        { status: 401 }
+      )
+    }
+
     const message = mockMessages.find(m => m.id === params.messageId)
 
     if (!message) {
@@ -896,6 +1157,13 @@ export const handlers = [
 
   http.delete(`${getBaseUrl()}/api/messages/:messageId`, ({ params }) => {
     // 删除消息（仅管理员）
+    if (!currentUser) {
+      return HttpResponse.json(
+        { error: { code: 401, message: 'Not authenticated' } },
+        { status: 401 }
+      )
+    }
+
     if (currentUser.role !== 'ADMIN') {
       return HttpResponse.json(
         { error: { code: 403, message: '只有管理员可以删除消息' } },
@@ -940,8 +1208,11 @@ export const handlers = [
     const index = mockUserGpuPermissions.findIndex(p => p.userId === params.userId)
 
     if (index !== -1) {
-      mockUserGpuPermissions[index].allowedGpuIds = body.gpuIds
-      return HttpResponse.json(mockUserGpuPermissions[index])
+      const permission = mockUserGpuPermissions[index]
+      if (permission) {
+        permission.allowedGpuIds = body.gpuIds
+        return HttpResponse.json(permission)
+      }
     }
 
     return HttpResponse.json(

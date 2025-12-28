@@ -40,3 +40,12 @@ app.use(router)
 app.use(vuetify)
 
 app.mount('#app')
+
+// 应用启动后，如果已登录则启动token自动刷新
+import { useAuthStore } from '@/stores/auth'
+import { tokenRefreshService } from '@/services/tokenRefreshService'
+
+const authStore = useAuthStore()
+if (authStore.isAuthenticated() && authStore.refreshToken) {
+  tokenRefreshService.startAutoRefresh()
+}

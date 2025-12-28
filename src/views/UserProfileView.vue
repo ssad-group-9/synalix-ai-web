@@ -288,12 +288,19 @@ const logout = async () => {
         if (authStore.refreshToken) {
             await authApi.logout({ refreshToken: authStore.refreshToken })
         }
+        // 停止token自动刷新服务
+        const { tokenRefreshService } = await import('@/services/tokenRefreshService')
+        tokenRefreshService.stopAutoRefresh()
+        
         authStore.clearAuth()
         router.push('/overview')
         showMessage('已退出登录')
     } catch (error) {
         console.error('退出登录失败:', error)
-        // 即使API调用失败，也清除本地认证状态
+        // 即使API调用失败，也清除本地认证状态和停止刷新服务
+        const { tokenRefreshService } = await import('@/services/tokenRefreshService')
+        tokenRefreshService.stopAutoRefresh()
+        
         authStore.clearAuth()
         router.push('/overview')
         showMessage('已退出登录')

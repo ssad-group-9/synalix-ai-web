@@ -52,6 +52,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { authApi, userApi } from '@/api'
+import { tokenRefreshService } from '@/services/tokenRefreshService'
 import type { AxiosError } from 'axios'
 import type { ApiErrorResponse } from '@/api/types'
 
@@ -120,6 +121,9 @@ const handleLogin = async () => {
         } catch (userError) {
             console.warn('获取用户信息失败，但登录成功:', userError)
         }
+
+        // 启动token自动刷新服务
+        tokenRefreshService.startAutoRefresh()
 
         // 重定向到目标页面或默认页面
         const redirect = (route.query.redirect as string) || '/overview'

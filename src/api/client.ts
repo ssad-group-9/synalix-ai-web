@@ -37,18 +37,21 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError<ApiErrorResponse>) => {
     const authStore = useAuthStore()
-    const originalRequest = error.config
+    const originalRequest = error.config as any
 
     // 如果是401错误且不是登录或刷新token的请求
-    if (error.response?.status === 401 && originalRequest) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       const isLoginRequest = originalRequest.url?.includes('/api/auth/login')
       const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh')
 
       if (!isLoginRequest && !isRefreshRequest && authStore.refreshToken) {
+        // 标记请求已重试，避免无限循环
+        originalRequest._retry = true
+
         try {
           // 尝试刷新token
           const refreshClient = axios.create({
-            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
           })
           const response = await refreshClient.post<RefreshTokenResponse>('/api/auth/refresh', {
             refreshToken: authStore.refreshToken,
