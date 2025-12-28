@@ -481,7 +481,7 @@ const loadModels = async () => {
   try {
     const response = await modelApi.getModels()
     models.value = response.data
-    if (models.value.length > 0) {
+    if (models.value.length > 0 && models.value[0]) {
       selectedModelId.value = models.value[0].id
     }
   } catch (error) {

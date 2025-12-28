@@ -59,7 +59,7 @@ export const useChatStore = defineStore(
             for (const c of next) {
                 if (!messagesByConversation.value[c.id]) messagesByConversation.value[c.id] = []
             }
-            if (!activeConversationId.value && next.length > 0) {
+            if (!activeConversationId.value && next.length > 0 && next[0]) {
                 activeConversationId.value = next[0].id
             }
         }
