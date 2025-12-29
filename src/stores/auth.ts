@@ -33,8 +33,7 @@ export const useAuthStore = defineStore(
         throw new Error('Invalid access token format');
       }
 
-      const jwtPayload = JSON.parse(atob(tokenParts[1]));
-      scheduleTokenRefresh(jwtPayload.exp * 1000 - Date.now())
+      scheduleTokenRefresh(300000)
     }
 
     const setUser = (userData: User) => {
