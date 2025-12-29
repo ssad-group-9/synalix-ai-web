@@ -80,8 +80,7 @@ export const useAuthStore = defineStore(
         refreshToken: refreshToken.value!, // 添加非空断言
       })
       setTokens(response.data.accessToken, refreshToken.value!)
-      const jwtPayload = JSON.parse(atob(response.data.accessToken.split('.')[1]))
-      scheduleTokenRefresh(jwtPayload.exp * 1000 - Date.now())
+      scheduleTokenRefresh(300000)
     }
 
     onBeforeUnmount(() => {
