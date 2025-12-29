@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
+import router from '@/router';
+import apiClient from '../api/client'
 
 export interface User {
   id: string
@@ -17,10 +19,22 @@ export const useAuthStore = defineStore(
     const accessToken = ref<string | null>(null)
     const refreshToken = ref<string | null>(null)
     const user = ref<User | null>(null)
+    const refreshTimer = ref<number | null>(null)
 
     const setTokens = (access: string, refresh: string) => {
-      accessToken.value = access
-      refreshToken.value = refresh
+      if (!access) {
+        throw new Error('Access token is required');
+      }
+      accessToken.value = access;
+      refreshToken.value = refresh;
+
+      const tokenParts = access.split('.');
+      if (tokenParts.length < 2) {
+        throw new Error('Invalid access token format');
+      }
+
+      const jwtPayload = JSON.parse(atob(tokenParts[1]));
+      scheduleTokenRefresh(jwtPayload.exp * 1000 - Date.now())
     }
 
     const setUser = (userData: User) => {
@@ -28,9 +42,13 @@ export const useAuthStore = defineStore(
     }
 
     const clearAuth = () => {
-      accessToken.value = null
-      refreshToken.value = null
-      user.value = null
+      accessToken.value = null;
+      refreshToken.value = null;
+      user.value = null;
+      if (refreshTimer.value) {
+        clearTimeout(refreshTimer.value);
+        refreshTimer.value = null;
+      }
     }
 
     const isAuthenticated = () => {
@@ -41,6 +59,38 @@ export const useAuthStore = defineStore(
       return user.value?.role === 'ADMIN'
     }
 
+    const scheduleTokenRefresh = (expiresIn: number) => {
+      if (refreshTimer.value) {
+        clearTimeout(refreshTimer.value)
+      }
+      refreshTimer.value = window.setTimeout(async () => {
+        try {
+          await refreshAccessToken()
+        } catch (error) {
+          clearAuth()
+          router.push({ name: 'login' })
+        }
+      }, expiresIn - 60000) // 提前1分钟刷新
+    }
+
+    const refreshAccessToken = async () => {
+      if (!refreshToken.value) {
+        throw new Error('No refresh token available')
+      }
+      const response = await apiClient.post('/api/auth/refresh', {
+        refreshToken: refreshToken.value!, // 添加非空断言
+      })
+      setTokens(response.data.accessToken, refreshToken.value!)
+      const jwtPayload = JSON.parse(atob(response.data.accessToken.split('.')[1]))
+      scheduleTokenRefresh(jwtPayload.exp * 1000 - Date.now())
+    }
+
+    onBeforeUnmount(() => {
+      if (refreshTimer.value) {
+        clearTimeout(refreshTimer.value)
+      }
+    })
+
     return {
       accessToken,
       refreshToken,
@@ -50,6 +100,8 @@ export const useAuthStore = defineStore(
       clearAuth,
       isAuthenticated,
       isAdmin,
+      scheduleTokenRefresh,
+      refreshAccessToken,
     }
   },
   {

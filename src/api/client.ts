@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AxiosResponse, AxiosError } from 'axios'
+import type { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import type { RefreshTokenResponse, ApiErrorResponse } from './types'
@@ -44,24 +44,18 @@ apiClient.interceptors.response.use(
       const isLoginRequest = originalRequest.url?.includes('/api/auth/login')
       const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh')
 
-      if (!isLoginRequest && !isRefreshRequest && authStore.refreshToken) {
+      if (!isLoginRequest && !isRefreshRequest) {
+        originalRequest._retry = true
         try {
           // 尝试刷新token
-          const refreshClient = axios.create({
-            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
-          })
-          const response = await refreshClient.post<RefreshTokenResponse>('/api/auth/refresh', {
-            refreshToken: authStore.refreshToken,
-          })
+          await authStore.refreshAccessToken()
 
           // 更新access token
-          authStore.setTokens(response.data.accessToken, authStore.refreshToken)
-
-          // 重试原始请求
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
+            originalRequest.headers.Authorization = `Bearer ${authStore.accessToken}`
           }
 
+          // 重试原始请求
           return apiClient(originalRequest)
         } catch (refreshError) {
           // 刷新token失败，清除认证信息并重定向到登录页
@@ -85,5 +79,11 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    _retry?: boolean
+  }
+}
 
 export default apiClient
